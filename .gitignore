@@ -1,0 +1,40 @@
+# Build artifacts
+*.exe
+*.o
+*.obj
+*.out
+nyx
+test_nyx
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test files (standalone test executables in root)
+test_*.exe
+test_*.o
+test_*.cpp
+
+# Input files
+test_input.txt
+
+# Debug files
+*_debug.cpp
+*_debug.exe
+*_debug.o
+
+# Docs (extensive documentation - keep simple for now)
+docs/CODE_EXPLANATION.md
+
+# Issues file
+ISSUES.md
