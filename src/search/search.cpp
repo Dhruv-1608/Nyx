@@ -9,7 +9,7 @@
 
 using namespace std;
 
-Searcher::Searcher() : m_tt(std::make_unique<TranspositionTable>(16)) {
+Searcher::Searcher() : m_tt(std::make_unique<TranspositionTable>(16)), m_best_score(0) {
     reset_stats();
 }
 
@@ -24,7 +24,8 @@ int Searcher::search(Board& board, Move& best_move, const Config& config) {
     auto start_time = std::chrono::steady_clock::now();
 
     if (config.max_depth == 1) {
-        int score = alpha_beta(board, 1, -30000, 30000, false);
+        Move dummy;
+        int score = alpha_beta(board, 1, -30000, 30000, false, dummy);
         MoveGenerator mg(board);
         MoveList moves = mg.generate_all();
         if (moves.size() > 0) {
@@ -33,12 +34,15 @@ int Searcher::search(Board& board, Move& best_move, const Config& config) {
         return score;
     }
 
+    // Run iterative deepening to find best move and score
     iterative_deepening(board, best_move, config);
+
+    int result_score = m_best_score; // Use score from iterative_deepening
 
     auto end_time = std::chrono::steady_clock::now();
     m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
 
-    return m_eval.evaluate(board);
+    return result_score;
 }
 
 void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& config) {
@@ -46,10 +50,11 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
     int best_score = -30000;
 
     for (int depth = 1; depth <= config.max_depth; ++depth) {
-        int score = alpha_beta(board, depth, -30000, 30000, false);
+        Move depth_best;
+        int score = alpha_beta(board, depth, -30000, 30000, false, depth_best);
         if (score > best_score || depth == 1) {
             best_score = score;
-            current_best = best_move;
+            current_best = depth_best;
         }
         if (config.max_time > 0 && m_stats.time_ms >= config.max_time) {
             break;
@@ -57,9 +62,11 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
     }
 
     best_move = current_best;
+    m_best_score = best_score; // Store for return
 }
 
-int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null) {
+int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
+    best_move = Move();
     m_stats.nodes++;
 
     // TT probe
@@ -108,15 +115,16 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         board.make_move(move);
 
         int score;
+        Move child_best;
         if (i == 0) {
-            score = -alpha_beta(board, depth - 1, -beta, -alpha, true);
+            score = -alpha_beta(board, depth - 1, -beta, -alpha, true, child_best);
         } else {
             // Late move reductions
             int reduction = (depth >= 3 && i >= 4) ? 1 : 0;
             int new_depth = depth - 1 - reduction;
-            score = -alpha_beta(board, new_depth, -alpha - 1, -alpha, false);
+            score = -alpha_beta(board, new_depth, -alpha - 1, -alpha, false, child_best);
             if (score > alpha && reduction > 0) {
-                score = -alpha_beta(board, depth - 1, -beta, -alpha, false);
+                score = -alpha_beta(board, depth - 1, -beta, -alpha, false, child_best);
             }
         }
 
@@ -145,6 +153,7 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         m_tt->store(key, best_score, depth, flag, best_move_local);
     }
 
+    best_move = best_move_local;
     return best_score;
 }
 

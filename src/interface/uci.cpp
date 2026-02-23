@@ -157,14 +157,24 @@ void UCI::cmd_debug(const std::string& args) {
 void UCI::cmd_setoption(const std::string& args) {
     std::istringstream iss(args);
     std::string token;
-    iss >> token; // name
-    while (iss >> token && token != "value") {
-        // skip
+    std::string option_name;
+    
+    // Parse "name XXX"
+    while (iss >> token) {
+        if (token == "value") break;
+        if (!option_name.empty()) option_name += " ";
+        option_name += token;
     }
+    
+    // Parse "value XXX"
     if (token == "value" && iss >> token) {
-        if (token == "Hash") {
-            int size_mb = std::stoi(token);
-            m_searcher = std::make_unique<Searcher>();
+        if (option_name == "Hash") {
+            try {
+                int size_mb = std::stoi(token);
+                m_searcher = std::make_unique<Searcher>();
+            } catch (...) {
+                // Invalid value, ignore
+            }
         }
     }
 }
@@ -228,29 +238,36 @@ bool UCI::parse_move(const std::string& str, Move& move) const {
     move.set_from(from);
     move.set_to(to);
 
-    // Find piece type
+    // Find piece type - must exist on from square
+    Color us = m_board.side_to_move();
     PieceType pt = PAWN;
+    bool found_piece = false;
+    
     if (str.length() > 4) {
+        // Promotion move
         char prom = str[4];
         if (prom == 'q') pt = QUEEN;
         else if (prom == 'r') pt = ROOK;
         else if (prom == 'b') pt = BISHOP;
         else if (prom == 'n') pt = KNIGHT;
+        else return false; // Invalid promotion piece
         move.set_promotion(1);
-    } else {
-        // Check board for piece
-        Bitboard piece_bb = m_board.pieces(PAWN, m_board.side_to_move()) & (1ULL << from);
-        if (piece_bb) {
-            pt = PAWN;
-        } else {
-            // Check other pieces
-            for (int p = KNIGHT; p <= KING; ++p) {
-                if (m_board.pieces(static_cast<PieceType>(p), m_board.side_to_move()) & (1ULL << from)) {
-                    pt = static_cast<PieceType>(p);
-                    break;
-                }
+        found_piece = true;
+    }
+    
+    if (!found_piece) {
+        // Check board for piece at from square
+        for (int p = PAWN; p <= KING; ++p) {
+            if (m_board.pieces(static_cast<PieceType>(p), us) & (1ULL << from)) {
+                pt = static_cast<PieceType>(p);
+                found_piece = true;
+                break;
             }
         }
+    }
+
+    if (!found_piece) {
+        return false; // No piece on from square
     }
 
     move.set_piece(pt);
