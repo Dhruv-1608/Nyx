@@ -20,7 +20,8 @@ void test_starting_position() {
 
 void test_fools_mate() {
     Board board;
-    board.load_fen("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 4");
+    // Fixed FEN: Black to move (b), queen at h5 delivers checkmate to f2
+    board.load_fen("rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR b KQkq - 1 4");
 
     MoveGenerator mg(board);
     MoveList moves = mg.generate_all();
@@ -116,7 +117,7 @@ void test_promotion() {
     bool has_promotion = false;
     for (size_t i = 0; i < moves.size(); ++i) {
         Move m = moves[i];
-        if (m.is_promotion() && m.to() == 8) { // a7 pawn promotes to a8
+        if (m.is_promotion() && m.to() == 56) { // a7 pawn promotes to a8 (square 56)
             has_promotion = true;
             break;
         }
