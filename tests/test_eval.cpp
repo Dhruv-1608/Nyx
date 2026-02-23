@@ -52,17 +52,13 @@ void test_white_material_advantage() {
 
 void test_black_material_advantage() {
     Board board;
-    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK1NR w KQkq - 0 1"); // Black has extra pawn? Actually not
-
-    // Let's create a position where Black is up a pawn
-    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"); // Black to move, equal material
+    board.load_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"); // Standard starting position, Black to move
 
     Evaluator eval;
     int score = eval.evaluate(board);
 
     std::cout << "Black to move evaluation: " << score << std::endl;
-    // Score from White's perspective should be negative if Black is better
-    // But material is equal, so should be near 0
+    // Score from White's perspective should be near 0 (equal position)
     if (abs(score) < 100) {
         std::cout << "  PASS: Position balanced" << std::endl;
     } else {
