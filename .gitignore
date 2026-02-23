@@ -20,10 +20,10 @@ Thumbs.db
 # Logs
 *.log
 
-# Test files (standalone test executables in root)
-test_*.exe
-test_*.o
-test_*.cpp
+# Test files (standalone test executables in root, not in tests/)
+/test_*.exe
+/test_*.o
+/test_*.cpp
 
 # Input files
 test_input.txt
@@ -32,9 +32,3 @@ test_input.txt
 *_debug.cpp
 *_debug.exe
 *_debug.o
-
-# Docs (extensive documentation - keep simple for now)
-docs/CODE_EXPLANATION.md
-
-# Issues file
-ISSUES.md
