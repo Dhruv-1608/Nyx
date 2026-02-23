@@ -84,7 +84,7 @@ void MoveGenerator::gen_pawn_moves(Square sq, Color c, MoveList& list) const {
     int y = rank_of(sq);
     int direction = (c == WHITE) ? 1 : -1;
     Color opponent = static_cast<Color>(1 - c);
-
+    
     // Forward moves
     Square to = to_square(x, y + direction);
     if (on_board(x, y + direction) && !(m_board.all_pieces() & (1ULL << to))) {

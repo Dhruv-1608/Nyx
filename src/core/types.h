@@ -24,8 +24,8 @@ struct Move {
     uint16_t promotion() const { return (data >> 15) & 0x01; }
     void set_from(uint16_t f) { data = (data & 0xFFC0) | (f & 0x3F); }
     void set_to(uint16_t t) { data = (data & 0xFC3F) | ((t & 0x3F) << 6); }
-    void set_piece(uint16_t p) { data = (data & 0xE1FF) | ((p & 0x07) << 12); }
-    void set_promotion(uint16_t prom) { data = (data & 0x7FFF) | ((prom & 0x01) << 15); }
+    void set_piece(uint16_t p) { data = (data & 0x8FFF) | ((p & 0x07) << 12); }
+    void set_promotion(uint16_t prom) { data = (data & 0xFFFE) | ((prom & 0x01) << 15); }
     bool is_promotion() const { return promotion() != 0; }
     bool is_capture() const { return false; }
 };
