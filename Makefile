@@ -1,9 +1,12 @@
 # Nyx Chess Engine Makefile
+# Note: This Makefile is designed for Unix-like systems (Linux/macOS)
+# For Windows, see README.md for compilation instructions
+#
 # Compilation: make
 # Clean: make clean
 
 CXX = g++
-CXXFLAGS = -std=c++17 -O3 -Wall -Wextra -Wpedantic -march=native
+CXXFLAGS = -std=c++17 -O3 -Wall -Wextra -Wpedantic
 INCLUDES = -Isrc/core -Isrc/search -Isrc/interface
 LDFLAGS =
 
@@ -49,7 +52,7 @@ $(TEST_TARGET): $(OBJS) $(TEST_OBJS)
 
 # Clean
 clean:
-	rm -f $(OBJS) $(TEST_OBJS) $(TARGET) $(TEST_TARGET)
+	-del /f /q $(OBJS:src/=%) $(TEST_OBJS:tests/%=%) $(TARGET) $(TEST_TARGET) 2>nul || echo "Cleaned"
 
 # Run tests
 run-tests: $(TEST_TARGET)
