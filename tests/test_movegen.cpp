@@ -75,10 +75,12 @@ void test_castling_rights() {
 
 void test_en_passant() {
     Board board;
-    board.load_fen("rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 3");
+    // Fixed: Position with black pawn on c5 (just moved two squares) and white pawn on d5
+    // En passant target is c6 - white pawn on d5 can capture en passant
+    board.load_fen("rnbqkbnr/pp1ppppp/8/2pP4/8/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 3");
 
     std::cout << "En passant target: ";
-    if (board.en_passant() == 40) { // c6
+    if (board.en_passant() == 42) { // c6
         std::cout << "PASS" << std::endl;
     } else {
         std::cout << "FAIL (expected c6, got " << board.en_passant() << ")" << std::endl;
@@ -87,11 +89,11 @@ void test_en_passant() {
     MoveGenerator mg(board);
     MoveList moves = mg.generate_all();
 
-    // Should have en passant capture available
+    // Should have en passant capture available: d5 pawn captures to c6
     bool has_ep = false;
     for (size_t i = 0; i < moves.size(); ++i) {
         Move m = moves[i];
-        if (m.to() == 40 && m.from() == 28) { // d5 pawn captures on c6
+        if (m.to() == 42 && m.from() == 35) { // d5->c6 en passant
             has_ep = true;
             break;
         }
