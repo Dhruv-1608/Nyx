@@ -23,7 +23,18 @@ void CLI::run() {
         print_board();
         std::cout << (m_board->side_to_move() == WHITE ? "White" : "Black") << " to move: ";
         std::string input;
+        
         std::getline(std::cin, input);
+        
+        // Check for input failure or EOF
+        if (std::cin.fail() || std::cin.eof()) {
+            std::cout << "\nInput stream closed. Exiting." << std::endl;
+            break;
+        }
+
+        // Clean input first (remove whitespace and lowercase)
+        input.erase(std::remove_if(input.begin(), input.end(), ::isspace), input.end());
+        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
 
         if (input == "quit" || input == "exit") break;
         if (input == "go") {
@@ -35,10 +46,6 @@ void CLI::run() {
             continue;
         }
         if (input.empty()) continue;
-
-        // Clean input
-        input.erase(std::remove_if(input.begin(), input.end(), ::isspace), input.end());
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
 
         Move move;
         if (parse_move(input, move)) {
