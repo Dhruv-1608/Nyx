@@ -3,6 +3,7 @@
 
 #include <string>
 #include <memory>
+#include "../core/types.h"
 
 class Board;
 class Searcher;
