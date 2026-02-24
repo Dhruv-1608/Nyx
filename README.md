@@ -148,3 +148,7 @@ Nyx is free and open source software licensed under the [MIT License](LICENSE).
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Project Stats
+
+![Alt](https://repobeats.axiom.co/api/embed/9b0b181fb1c6a4875d1db7d40ee9101f3ea82fc8.svg "Repobeats analytics image")
