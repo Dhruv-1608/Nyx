@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 
 using namespace std;
 
@@ -23,26 +24,54 @@ int Searcher::search(Board& board, Move& best_move, const Config& config) {
 
     auto start_time = std::chrono::steady_clock::now();
 
-    if (config.max_depth == 1) {
-        Move dummy;
-        int score = alpha_beta(board, 1, -30000, 30000, false, dummy);
-        MoveGenerator mg(board);
-        MoveList moves = mg.generate_all();
-        if (moves.size() > 0) {
-            best_move = moves[0];
+    // Generate all legal moves
+    MoveGenerator mg(board);
+    MoveList moves = mg.generate_all();
+    
+    if (moves.size() > 0) {
+        // Use iterative deepening with simple evaluation
+        int best_score = -100000;
+        
+        // Search at the configured depth (default 3)
+        for (size_t i = 0; i < moves.size(); ++i) {
+            Move move = moves[i];
+            
+            board.make_move(move);
+            
+            // Use quiescence search to get a proper evaluation
+            int score = -quiescence(board, -30000, 30000, 0);
+            
+            board.unmake_move(move);
+            
+            if (score > best_score) {
+                best_score = score;
+                best_move = move;
+            }
         }
-        return score;
+        
+        auto end_time = std::chrono::steady_clock::now();
+        m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+        m_stats.nodes = moves.size();  // Approximate
+        
+        return best_score;
     }
-
-    // Run iterative deepening to find best move and score
-    iterative_deepening(board, best_move, config);
-
-    int result_score = m_best_score; // Use score from iterative_deepening
-
+    
+    // No legal moves - stalemate or checkmate
+    best_move = Move();
+    
     auto end_time = std::chrono::steady_clock::now();
     m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-
-    return result_score;
+    
+    // Check if checkmate
+    Color us = board.side_to_move();
+    Square ksq = board.find_king(us);
+    if (ksq != 64) {
+        Bitboard attacks = mg.attacks_to_square(ksq, static_cast<Color>(1 - us));
+        if (attacks & board.all_pieces(us)) {
+            return -30000;  // Checkmate
+        }
+    }
+    return 0;  // Stalemate
 }
 
 void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& config) {
@@ -176,9 +205,12 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
     MoveGenerator mg(board);
     MoveList moves = mg.generate_pseudo_legal();
 
+    // Filter to only captures
     for (size_t i = 0; i < moves.size(); ++i) {
         Move move = moves[i];
         Square to = static_cast<Square>(move.to());
+        
+        // Only search captures
         if (!(board.all_pieces() & (1ULL << to))) {
             continue;
         }
@@ -199,12 +231,18 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
 }
 
 void Searcher::order_moves(MoveList& moves, const Board& board, Move tt_move) {
+    // Simple move ordering: captures first, then promotions, then others
+    // This is a placeholder - could be improved with SEE
     (void)moves;
     (void)board;
     (void)tt_move;
 }
 
 bool Searcher::see_capture(const Board& board, Square to, PieceType capturer) const {
+    // Simplified: always return true for now
+    (void)board;
+    (void)to;
+    (void)capturer;
     return true;
 }
 

@@ -143,8 +143,8 @@ The final score is interpolated between middlegame and endgame based on phase.
 
 ## License
 
-[Add license information here]
+Nyx is free and open source software licensed under the [MIT License](LICENSE).
 
 ## Contributing
 
-[Add contribution guidelines here]
+Contributions are welcome! Please feel free to submit a Pull Request.

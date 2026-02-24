@@ -107,7 +107,7 @@ void UCI::cmd_go(const std::string& args) {
     m_should_stop = false;
 
     Searcher::Config config;
-    config.max_depth = 10;
+    config.max_depth = 3;  // Default to low depth for quick response
     config.max_time = 0;
     config.use_tt = true;
 
@@ -116,12 +116,19 @@ void UCI::cmd_go(const std::string& args) {
     while (iss >> token) {
         if (token == "depth") {
             iss >> config.max_depth;
+            // Limit max depth to prevent hanging
+            if (config.max_depth > 10) config.max_depth = 10;
         } else if (token == "movetime") {
             int ms;
             iss >> ms;
             config.max_time = ms;
+            // Convert to depth based on time
+            if (ms < 1000) config.max_depth = 2;
+            else if (ms < 3000) config.max_depth = 3;
+            else if (ms < 10000) config.max_depth = 5;
         } else if (token == "wtime" || token == "btime") {
-            // TODO: time management
+            // Time management - use moderate depth
+            config.max_depth = 5;
         }
     }
 
@@ -181,6 +188,7 @@ void UCI::cmd_setoption(const std::string& args) {
 
 void UCI::send_response(const std::string& msg) {
     std::cout << msg << std::endl;
+    std::cout.flush();
 }
 
 void UCI::send_info(const std::string& msg) {
@@ -191,6 +199,7 @@ void UCI::send_info(const std::string& msg) {
 
 void UCI::send_best_move(const std::string& move) {
     std::cout << "bestmove " << move << std::endl;
+    std::cout.flush();
 }
 
 std::string UCI::move_to_uci(const Move& move) const {
