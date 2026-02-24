@@ -190,9 +190,12 @@ void MoveGenerator::gen_bishop_moves(Square sq, Color c, MoveList& list) const {
     Bitboard their_pieces = m_board.all_pieces(opponent);
     Bitboard all_occ = m_board.all_pieces();
 
+    // Bishop moves diagonally: up-left, up-right, down-left, down-right
+    const int bishop_dirs[4][2] = { {-1, 1}, {1, 1}, {-1, -1}, {1, -1} };
+
     for (int dir = 0; dir < 4; ++dir) {
-        int dx = (dir < 2) ? (dir == 0 ? -1 : 1) : 0;
-        int dy = (dir >= 2) ? (dir == 2 ? 1 : -1) : 0;
+        int dx = bishop_dirs[dir][0];
+        int dy = bishop_dirs[dir][1];
 
         int nx = x + dx;
         int ny = y + dy;

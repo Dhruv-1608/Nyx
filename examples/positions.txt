@@ -1,0 +1,886 @@
+# Example positions for testing Nyx
+# Format: FEN string followed by optional description
+
+# Starting position
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Standard starting position
+
+# King and pawn endgame
+8/8/8/8/8/5k2/5p2/5K2 w - - 0 1
+# King and pawn vs King endgame
+
+# Rook endgame
+6k1/5ppp/8/8/8/8/5PPP/6K1 w - - 0 1
+# Rook endgame with pawns
+
+# Queen vs rook
+6k1/8/8/8/8/5Q2/5q2/6K1 w - - 0 1
+# Queen vs queen endgame
+
+# Tactical position - Scholar's mate setup
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# After 1.e4 e5 2.Nf3
+
+# Castling rights test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# All castling rights available
+
+# No castling rights
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1
+# Castling rights lost
+
+# En passant target
+rnbqkbnr/pppppppp/8/8/4Pp2/8/PPPP1PPP/RNBQKBNR w KQkq f3 0 3
+# After e4 e5, f7-f5, e4-e5 - en passant available on f6
+
+# En passant - common test
+rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 3
+# After c7-c5, d7-d5, e4xd5 - en passant on c6
+
+# Checkmate position
+rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 4
+# Fool's mate position (Black can checkmate)
+
+# Checkmate in 1 - Scholar's mate
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# White can play Qh5# (if Black's last move was Nc6)
+
+# Perpetual check scenario
+6k1/5ppp/8/8/8/8/5PPP/6K1 w - - 0 1
+# King and pawn endgame - drawish
+
+# Opposite colored bishops
+8/8/8/8/8/3b4/8/3B3k w - - 0 1
+# Opposite colored bishops endgame
+
+# Rook vs queen
+6k1/8/8/8/8/8/5r2/5Q2 w - - 0 1
+# Rook vs queen
+
+# Pawn promotion race
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# King and pawn vs king - promotion race
+
+# Zugzwang position
+8/8/8/8/8/5k2/5p2/5K2 w - - 0 1
+# King and pawn endgame - zugzwang potential
+
+# Smothered mate setup
+6k1/5ppp/8/8/8/8/5PPP/6K1 w - - 0 1
+# Simple position for testing
+
+# Double check
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - no checks
+
+# Pinned piece test
+rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4
+# Black's d5 pawn is pinned to queen
+
+# Discovered attack potential
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - many discovered attack possibilities
+
+# Castling under attack
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - castling squares not attacked
+
+# Promotion with check
+8/P7/8/8/8/8/8/4K2k w - - 0 1
+# White a-pawn can promote with check
+
+# En passant capture
+rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 3
+# Standard en passant test position
+
+# Castling rights after king move
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK1NR w KQkq - 0 1
+# King not on e1, castling rights still present but will be lost after move
+
+# Rook lift
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - rook lift possible after development
+
+# Queen side castling
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQkq - 0 1
+# White can castle queenside
+
+# King safety evaluation
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - king should be safe
+
+# Mobility test - open position
+8/8/8/8/8/8/8/4K3 w - - 0 1
+# Only king - minimal mobility
+
+# Material imbalance
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - balanced material
+
+# Pawn structure test
+8/8/8/8/3p4/8/3P4/8 w - - 0 1
+# Isolated pawn on d4
+
+# Doubled pawns
+8/8/8/8/3ppp2/8/3PPP2/8 w - - 0 1
+# Doubled pawns for both sides
+
+# Passed pawn
+8/8/8/8/4P3/8/4p3/8 w - - 0 1
+# White e-pawn is passed
+
+# Space advantage
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - equal space
+
+# King in center (endgame)
+8/8/8/8/8/5k2/5K2/8 w - - 0 1
+# King vs king endgame
+
+# Bishop pair vs knight
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - both sides have bishop pair
+
+# Knight outpost
+8/8/8/8/8/3N4/8/8 w - - 0 1
+# Knight on d5 (good outpost)
+
+# Rook on 7th rank
+8/8/8/8/8/8/4R3/4K2k w - - 0 1
+# Rook on 7th rank - strong
+
+# Queen infiltration
+8/8/8/8/8/8/4Q3/4K2k w - - 0 1
+# Queen on 7th rank
+
+# Pawn majority
+8/8/8/8/8/pppp4/PPPP4/8 w - - 0 1
+# White has pawn majority on queenside
+
+# Pawn chain
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Pawn chain structure
+
+# Isolated queen pawn
+8/8/8/8/3p4/8/3P4/8 w - - 0 1
+# Isolated d-pawn
+
+# Backward pawn
+8/8/8/8/2p5/8/2P5/8 w - - 0 1
+# Backward c-pawn
+
+# Connected passed pawns
+8/8/8/8/4pp2/8/4PP2/8 w - - 0 1
+# Connected passed pawns
+
+# Doubled rooks
+8/8/8/8/8/8/4RR2/4K2k w - - 0 1
+# Doubled rooks on same file
+
+# Knight fork potential
+8/8/8/8/8/3N4/8/8 w - - 0 1
+# Knight can fork king and queen if they're on appropriate squares
+
+# Bishop fork
+8/8/8/8/8/3B4/8/8 w - - 0 1
+# Bishop on diagonal
+
+# Rook skewer
+8/8/8/8/8/8/4R3/4K2k w - - 0 1
+# Rook on 7th can skewer
+
+# Pin
+rnbqkbnr/ppp2ppp/8/3pp3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4
+# Black queen pinned to king
+
+# Discovered check
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - discovered check possible after move
+
+# Battery
+8/8/8/8/8/3Q4/4Q3/8 w - - 0 1
+# Queen battery on same file/diagonal
+
+# X-ray attack
+8/8/8/8/8/3B4/3q4/8 w - - 0 1
+# Bishop x-ray through queen
+
+# Overloading
+8/8/8/8/8/3Q4/4q3/8 w - - 0 1
+# Queen overloaded defending multiple squares
+
+# Deflection
+8/8/8/8/8/3QK3/4q3/8 w - - 0 1
+# King and queen defending, queen can be deflected
+
+# Zwischenzug
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - zwischenzug possible
+
+# Underpromotion
+8/8/8/8/8/5P2/5K2/5k2 w - - 0 1
+# Pawn on f6 can underpromote to knight
+
+# stalemate
+6k1/5ppp/8/8/8/8/5PPP/6K1 w - - 0 1
+# Could be stalemate if king has no moves and not in check
+
+# 50-move rule
+8/8/8/8/8/8/7K/7k w - - 100 1
+# 100 half-moves (50-move rule would apply at 100)
+
+# Threefold repetition
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Same position repeated 3 times (not tracked here)
+
+# Insufficient material
+8/8/8/8/8/5k2/5K2/8 w - - 0 1
+# King vs king - draw
+
+# Pawnless endgame
+8/8/8/8/8/5n2/5K2/8 w - - 0 1
+# King and knight vs king - draw
+
+# Two knights vs king
+8/8/8/8/8/5N2/5K2/8 w - - 0 1
+# Two knights vs king - theoretical draw but can be mate with help
+
+# Queen vs pawn on 7th
+8/8/8/8/8/8/4p3/4K2k w - - 0 1
+# Queen vs pawn on 7th rank
+
+# Rook vs pawn on 7th
+8/8/8/8/8/8/4p3/4K2k w - - 0 1
+# Rook vs pawn on 7th
+
+# King and pawn vs king (key square)
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Key square opposition
+
+# Opposition
+8/8/8/8/8/5K2/5k2/8 w - - 0 1
+# King opposition
+
+# Triangulation
+8/8/8/8/8/5K2/5k2/8 w - - 0 1
+# King triangulation for zugzwang
+
+# Lucena position
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Lucena rook pawn position
+
+# Philidor position
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Philidor defense
+
+# Endgame study
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Classic endgame study position
+
+# Tactical puzzle - mate in 2
+rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3
+# Potential mate in 2
+
+# Defensive resource
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Check if Black has defense against Qh5
+
+# Counterattack
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Black counter-threat
+
+# Time pressure scenario
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - quick development needed
+
+# Opening trap
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Italian game trap (Traxler counterattack possibility)
+
+# Gambit position
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# King's gambit after e4 e5 f4
+
+# Endgame fortress
+8/8/8/8/8/5k2/5p2/5K2 w - - 0 1
+# Fortress structure
+
+# Pawn break
+8/8/8/8/3p4/8/3P4/8 w - - 0 1
+# White can play d5 to break
+
+# Minority attack
+8/8/8/8/8/pppp4/PPPP4/8 w - - 0 1
+# White can attack with a,b pawns
+
+# Majority push
+8/8/8/8/8/pppp4/PPPP4/8 w - - 0 1
+# White pawn majority on queenside
+
+# Pawn storm
+8/8/8/8/8/5P2/5P2/8 w - - 0 1
+# Pawn storm on kingside
+
+# Pawn chain attack
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Pawn chain - attack base
+
+# Open file
+8/8/8/8/8/8/8/4K3 w - - 0 1
+# Open file for rooks
+
+# Half-open file
+8/8/8/8/8/8/8/4K3 w - - 0 1
+# Half-open file
+
+# Closed position
+8/8/8/8/8/pppppppp/PPPPPPPP/8 w - - 0 1
+# Closed center - flank attacks
+
+# Open position
+8/8/8/8/8/8/8/4K3 w - - 0 1
+# Open position - piece activity important
+
+# Dynamic vs static
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting position - mix of dynamic and static factors
+
+# Initiative
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# White has initiative after e4 e5 Nf3
+
+# Prophylaxis
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Prophylactic thinking needed
+
+# Weak squares
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Weak d5 square after pawn exchange
+
+# Stronghold
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Stronghold on d5 for Black's knight
+
+# Outpost
+8/8/8/8/8/3N4/8/8 w - - 0 1
+# Knight outpost on d5
+
+# Hole
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Hole in pawn structure
+
+# Weak color complex
+8/8/8/8/8/3b4/8/3B3k w - - 0 1
+# Dark square weaknesses
+
+# Pawn island
+8/8/8/8/8/3ppp2/3PPP2/8 w - - 0 1
+# Pawn islands
+
+# Pawn chain base
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Pawn chain base on c3/d4
+
+# Pawn chain head
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Pawn chain head on d4
+
+# Counterplay
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Black has counterplay in center
+
+# Attack
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# White attacking on kingside
+
+# Defense
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Black defending
+
+# Initiative test
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Who has initiative?
+
+# Development
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Development advantage
+
+# Tempo
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Tempo advantage
+
+# Space
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Space control
+
+# Pawn structure
+8/8/8/8/8/3ppp2/3PPP2/8 w - - 0 1
+# Pawn structure evaluation
+
+# King safety
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# King safety in starting position
+
+# Material
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Material balance
+
+# Mobility test
+8/8/8/8/8/8/8/4K3 w - - 0 1
+# King mobility only
+
+# Control of center
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Center control
+
+# Flank attack
+8/8/8/8/8/pppppppp/PPPPPPPP/8 w - - 0 1
+# Flank attack possible
+
+# Central breakthrough
+8/8/8/8/8/pppppppp/PPPPPPPP/8 w - - 0 1
+# Central pawn break
+
+# Pawn storm on both wings
+8/8/8/8/8/5P2/5P2/8 w - - 0 1
+# Pawn storm
+
+# Opposite side castling
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Opposite side castling race
+
+# Same side castling
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Same side castling
+
+# Pawn endgame
+8/8/8/8/8/5P2/5P2/8 w - - 0 1
+# Pure pawn endgame
+
+# Knight endgame
+8/8/8/8/8/5N2/5N2/8 w - - 0 1
+# Knight endgame
+
+# Bishop endgame
+8/8/8/8/8/3B4/3b4/8 w - - 0 1
+# Bishop endgame (opposite colors)
+
+# Rook endgame
+8/8/8/8/8/5R2/5r2/8 w - - 0 1
+# Rook endgame
+
+# Queen endgame
+8/8/8/8/8/5Q2/5q2/8 w - - 0 1
+# Queen endgame
+
+# Queen vs rook
+8/8/8/8/8/5Q2/5r2/8 w - - 0 1
+# Queen vs rook
+
+# Queen vs knight
+8/8/8/8/8/5Q2/5N2/8 w - - 0 1
+# Queen vs knight
+
+# Rook vs knight
+8/8/8/8/8/5R2/5N2/8 w - - 0 1
+# Rook vs knight
+
+# Rook vs bishop
+8/8/8/8/8/5R2/5b2/8 w - - 0 1
+# Rook vs bishop
+
+# Minor piece vs pawn
+8/8/8/8/8/5N2/5p2/8 w - - 0 1
+# Knight vs pawn
+
+# King and pawn vs king
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# King and pawn vs king
+
+# Two bishops vs king
+8/8/8/8/8/3B4/3b4/8 w - - 0 1
+# Two bishops vs king
+
+# Bishop and knight vs king
+8/8/8/8/8/3B4/3n4/8 w - - 0 1
+# Bishop and knight vs king
+
+# Rook and pawn vs rook
+8/8/8/8/8/5R2/5r1p/8 w - - 0 1
+# Rook and pawn vs rook
+
+# Queen and pawn vs queen
+8/8/8/8/8/5Q2/5q1p/8 w - - 0 1
+# Queen and pawn vs queen
+
+# Endgame study - Lucena
+8/8/8/8/8/5K2/5P1k/8 w - - 0 1
+# Lucena position
+
+# Endgame study - Philidor
+8/8/8/8/8/5K2/5P1k/8 w - - 0 1
+# Philidor position
+
+# Endgame study - Troitsky
+8/8/8/8/8/5K2/5N1k/8 w - - 0 1
+# Troitsky line (two knights vs king)
+
+# Practical endgame - rook and pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Rook pawn endgame
+
+# Queen pawn endgame
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Queen pawn vs king
+
+# Bishop pawn endgame
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Bishop pawn vs king
+
+# Knight pawn endgame
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Knight pawn vs king
+
+# Rook pawn endgame
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Rook pawn vs king
+
+# Central pawn endgame
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Central pawn vs king
+
+# Outside passed pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Outside passed pawn
+
+# Connected passed pawns
+8/8/8/8/8/5K2/4PP2/5k2 w - - 0 1
+# Connected passed pawns
+
+# Doubled passed pawns
+8/8/8/8/8/5K2/5P1P/5k2 w - - 0 1
+# Doubled passed pawns
+
+# Isolated passed pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Isolated passed pawn
+
+# Protected passed pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Protected passed pawn
+
+# Advanced passed pawn
+8/8/8/8/8/5K2/7P/5k2 w - - 0 1
+# Advanced passed pawn
+
+# Blocked passed pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Blocked passed pawn
+
+# Free passed pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Free passed pawn
+
+# Candidate passed pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Candidate passed pawn
+
+# Distant passed pawn
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Distant passed pawn
+
+# King in the center (middlegame)
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# King should castle
+
+# King walk
+8/8/8/8/8/5K2/5k2/8 w - - 0 1
+# King walk in endgame
+
+# King infiltration
+8/8/8/8/8/5K2/5k2/8 w - - 0 1
+# King infiltration
+
+# King as attacker
+8/8/8/8/8/5K2/5k2/8 w - - 0 1
+# King as attacking piece
+
+# King as defender
+8/8/8/8/8/5K2/5k2/8 w - - 0 1
+# King as defender
+
+# Pawn shield test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# King pawn shield
+
+# Pawn storm vs king
+8/8/8/8/8/5P2/5P2/5K2k w - - 0 1
+# Pawn storm attacking king
+
+# Open file attack
+8/8/8/8/8/5R2/5r2/8 w - - 0 1
+# Rook on open file
+
+# Half-open file attack
+8/8/8/8/8/5R2/5r2/8 w - - 0 1
+# Rook on half-open file
+
+# Diagonal control
+8/8/8/8/8/3B4/3b4/8 w - - 0 1
+# Bishop controlling diagonal
+
+# Knight outpost test
+8/8/8/8/8/3N4/8/8 w - - 0 1
+# Knight on outpost
+
+# Queen infiltration test
+8/8/8/8/8/5Q2/5q2/8 w - - 0 1
+# Queen infiltration
+
+# Rook on 7th rank test
+8/8/8/8/8/8/4R3/4K2k w - - 0 1
+# Rook on 7th
+
+# Bishop pair test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Both sides have bishop pair
+
+# Knight vs bishop
+8/8/8/8/8/5N2/5B2/8 w - - 0 1
+# Knight vs bishop
+
+# Rook vs minor piece
+8/8/8/8/8/5R2/5N2/8 w - - 0 1
+# Rook vs knight
+
+# Queen vs rook
+8/8/8/8/8/5Q2/5R2/8 w - - 0 1
+# Queen vs rook
+
+# Material imbalance test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Starting material balance
+
+# Space advantage test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Space evaluation
+
+# Pawn structure test
+8/8/8/8/8/3ppp2/3PPP2/8 w - - 0 1
+# Pawn structure
+
+# King safety test
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# King safety after e4 e5 Nf3
+
+# Mobility test
+8/8/8/8/8/8/8/4K3 w - - 0 1
+# King mobility
+
+# Piece activity
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Piece activity in starting position
+
+# Development test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Development in starting position
+
+# Tempo test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Tempo advantage
+
+# Initiative test
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Initiative after 1.e4 e5 2.Nf3
+
+# Attack vs defense
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Attack/defense balance
+
+# Counterplay test
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Counterplay potential
+
+# Prophylaxis test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Prophylactic considerations
+
+# Weak squares test
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Weak squares after pawn exchange
+
+# Strong squares
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Strong outpost squares
+
+# Hole test
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Holes in pawn structure
+
+# Weak color complex test
+8/8/8/8/8/3b4/8/3B3k w - - 0 1
+# Weak color complex
+
+# Pawn island test
+8/8/8/8/8/3ppp2/3PPP2/8 w - - 0 1
+# Pawn islands
+
+# Pawn chain test
+8/8/8/8/8/3p4/3P4/8 w - - 0 1
+# Pawn chain
+
+# Space test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Space control evaluation
+
+# Center control test
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+# Center control
+
+# Flank attack test
+8/8/8/8/8/pppppppp/PPPPPPPP/8 w - - 0 1
+# Flank attack
+
+# Central breakthrough test
+8/8/8/8/8/pppppppp/PPPPPPPP/8 w - - 0 1
+# Central breakthrough
+
+# Pawn storm test
+8/8/8/8/8/5P2/5P2/8 w - - 0 1
+# Pawn storm
+
+# Opposite side castling test
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Opposite side castling race
+
+# Same side castling test
+rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 1 3
+# Same side castling
+
+# Pawn endgame test
+8/8/8/8/8/5P2/5P2/8 w - - 0 1
+# Pawn endgame
+
+# Knight endgame test
+8/8/8/8/8/5N2/5N2/8 w - - 0 1
+# Knight endgame
+
+# Bishop endgame test
+8/8/8/8/8/3B4/3b4/8 w - - 0 1
+# Bishop endgame
+
+# Rook endgame test
+8/8/8/8/8/5R2/5r2/8 w - - 0 1
+# Rook endgame
+
+# Queen endgame test
+8/8/8/8/8/5Q2/5q2/8 w - - 0 1
+# Queen endgame
+
+# Queen vs rook test
+8/8/8/8/8/5Q2/5R2/8 w - - 0 1
+# Queen vs rook
+
+# Queen vs minor piece test
+8/8/8/8/8/5Q2/5N2/8 w - - 0 1
+# Queen vs knight
+
+# Rook vs minor piece test
+8/8/8/8/8/5R2/5N2/8 w - - 0 1
+# Rook vs knight
+
+# King and pawn vs king test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# King and pawn vs king
+
+# Two bishops vs king test
+8/8/8/8/8/3B4/3b4/8 w - - 0 1
+# Two bishops vs king
+
+# Bishop and knight vs king test
+8/8/8/8/8/3B4/3n4/8 w - - 0 1
+# Bishop and knight vs king
+
+# Rook and pawn vs rook test
+8/8/8/8/8/5R2/5r1p/8 w - - 0 1
+# Rook and pawn vs rook
+
+# Queen and pawn vs queen test
+8/8/8/8/8/5Q2/5q1p/8 w - - 0 1
+# Queen and pawn vs queen
+
+# Lucena test
+8/8/8/8/8/5K2/5P1k/8 w - - 0 1
+# Lucena position
+
+# Philidor test
+8/8/8/8/8/5K2/5P1k/8 w - - 0 1
+# Philidor position
+
+# Troitsky test
+8/8/8/8/8/5K2/5N1k/8 w - - 0 1
+# Troitsky line
+
+# Practical endgame test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Rook pawn endgame
+
+# Queen pawn endgame test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Queen pawn vs king
+
+# Bishop pawn endgame test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Bishop pawn vs king
+
+# Knight pawn endgame test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Knight pawn vs king
+
+# Rook pawn endgame test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Rook pawn vs king
+
+# Central pawn endgame test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Central pawn vs king
+
+# Outside passed pawn test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Outside passed pawn
+
+# Connected passed pawns test
+8/8/8/8/8/5K2/4PP2/5k2 w - - 0 1
+# Connected passed pawns
+
+# Doubled passed pawns test
+8/8/8/8/8/5K2/5P1P/5k2 w - - 0 1
+# Doubled passed pawns
+
+# Isolated passed pawn test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Isolated passed pawn
+
+# Protected passed pawn test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Protected passed pawn
+
+# Advanced passed pawn test
+8/8/8/8/8/5K2/7P/5k2 w - - 0 1
+# Advanced passed pawn
+
+# Blocked passed pawn test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Blocked passed pawn
+
+# Free passed pawn test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Free passed pawn
+
+# Candidate passed pawn test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Candidate passed pawn
+
+# Distant passed pawn test
+8/8/8/8/8/5K2/5P2/5k2 w - - 0 1
+# Distant passed pawn
