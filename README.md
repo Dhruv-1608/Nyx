@@ -28,10 +28,10 @@ make
 
 ```bash
 # Build main engine
-g++ -std=c++17 -O3 -Wall -Wextra -Isrc/core -Isrc/search -Isrc/interface -o nyx src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/search/transposition.cpp src/search/search.cpp src/interface/uci.cpp src/interface/cli.cpp
+g++ -std=c++17 -O3 -Wall -Wextra -Isrc/core -Isrc/search -Isrc/interface -o nyx src/main.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/search/transposition.cpp src/search/search.cpp src/interface/uci.cpp src/interface/cli.cpp
 
 # Build test suite
-g++ -std=c++17 -O3 -Wall -Isrc/core -Isrc/search -o test_nyx src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/search/transposition.cpp src/search/search.cpp tests/test_eval.cpp tests/test_movegen.cpp tests/test_search.cpp
+g++ -std=c++17 -O3 -Wall -Isrc/core -Isrc/search -Isrc/interface -o test_movegen tests/test_movegen.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp
 ```
 
 ### Clean Build
@@ -104,6 +104,16 @@ nyx/
 ```
 
 ## Recent Fixes
+
+### Move Encoding Bug (Fixed - March 2026)
+- **Problem**: `Move::is_capture()` always returned false, breaking move ordering
+- **Solution**: Implemented proper `MoveType` enum with capture detection
+- **Status**: ✅ Fixed
+
+### Promotion Encoding (Fixed - March 2026)
+- **Problem**: Promotion moves weren't properly encoded
+- **Solution**: Restructured move bits to handle all promotion types
+- **Status**: ✅ Fixed
 
 ### Issue #3: Evaluation Asymmetry (Fixed)
 - **Problem**: Test showed +170 for Black to move instead of ~0

@@ -204,6 +204,16 @@ void Board::place_piece(Square sq, PieceType pt, Color c) {
     m_colors[c] |= 1ULL << sq;
 }
 
+// Helper function to find piece type at a square
+PieceType piece_at_square(const Board& board, Square sq, Color c) {
+    for (int pt = 0; pt < NUM_PIECES; ++pt) {
+        if (board.pieces(static_cast<PieceType>(pt), c) & (1ULL << sq)) {
+            return static_cast<PieceType>(pt);
+        }
+    }
+    return NONE;
+}
+
 void Board::make_move(const Move& move) {
     // Save state
     State& st = m_history[m_history_ply];
@@ -223,45 +233,62 @@ void Board::make_move(const Move& move) {
 
     Square from = static_cast<Square>(move.from());
     Square to = static_cast<Square>(move.to());
-    PieceType pt = static_cast<PieceType>(move.piece());
+    uint16_t move_type = move.type();
+    
+    // Find the piece that's moving (check board, not move type)
+    PieceType pt = NONE;
+    for (int p = 0; p < NUM_PIECES; ++p) {
+        if (m_pieces[p][m_side] & (1ULL << from)) {
+            pt = static_cast<PieceType>(p);
+            break;
+        }
+    }
+    
+    Color opponent = static_cast<Color>(1 - m_side);
+    bool is_capture = move.is_capture();
+    bool is_promotion = move.is_promotion();
+    bool is_castling = move.is_castle();
+    bool is_en_passant = move.is_en_passant();
+    bool is_double_push = move.is_double_push();
 
     // Handle en passant capture
-    if (pt == PAWN && to == m_en_passant) {
-        Color opponent = static_cast<Color>(1 - m_side);
+    if (is_en_passant) {
         Square captured_sq = static_cast<Square>(to + (m_side == WHITE ? -8 : 8));
+        clear_piece(captured_sq, PAWN, opponent);
+        m_halfmove = 0;
+    }
+    // Handle regular captures
+    else if (is_capture) {
         for (int cap_pt = 0; cap_pt < NUM_PIECES; ++cap_pt) {
-            if (m_pieces[cap_pt][opponent] & (1ULL << captured_sq)) {
-                clear_piece(captured_sq, static_cast<PieceType>(cap_pt), opponent);
+            if (m_pieces[cap_pt][opponent] & (1ULL << to)) {
+                clear_piece(to, static_cast<PieceType>(cap_pt), opponent);
+                m_halfmove = 0;
                 break;
             }
         }
     }
 
-    // Handle captures
-    Color opponent = static_cast<Color>(1 - m_side);
-    for (int cap_pt = 0; cap_pt < NUM_PIECES; ++cap_pt) {
-        if (m_pieces[cap_pt][opponent] & (1ULL << to)) {
-            clear_piece(to, static_cast<PieceType>(cap_pt), opponent);
-            m_halfmove = 0;
-            break;
-        }
+    // Move the piece
+    clear_piece(from, pt, m_side);
+    
+    // Handle promotion
+    if (is_promotion) {
+        PieceType promo_piece = move.promotion_piece();
+        place_piece(to, promo_piece, m_side);
+    } else {
+        place_piece(to, pt, m_side);
     }
 
-    // Move piece
-    clear_piece(from, pt, m_side);
-    place_piece(to, pt, m_side);
-
-    // Handle castling (king moves 2 squares horizontally)
-    if (pt == KING && abs(static_cast<int>(to) - static_cast<int>(from)) == 2) {
-        // Determine rook move based on direction
-        if (to > from) {
-            // Kingside castling: rook from h-file to f-file
+    // Handle castling - move the rook
+    if (is_castling) {
+        if (move.is_kingside_castle()) {
+            // Kingside: rook from h-file to f-file
             Square rook_from = (m_side == WHITE) ? SQ_H1 : SQ_H8;
             Square rook_to = (m_side == WHITE) ? SQ_F1 : SQ_F8;
             clear_piece(rook_from, ROOK, m_side);
             place_piece(rook_to, ROOK, m_side);
         } else {
-            // Queenside castling: rook from a-file to d-file
+            // Queenside: rook from a-file to d-file
             Square rook_from = (m_side == WHITE) ? SQ_A1 : SQ_A8;
             Square rook_to = (m_side == WHITE) ? SQ_D1 : SQ_D8;
             clear_piece(rook_from, ROOK, m_side);
@@ -269,26 +296,28 @@ void Board::make_move(const Move& move) {
         }
     }
 
-    // Update castling rights
+    // Update castling rights based on piece movements
     update_castling_rights(from, to);
-
-    // Handle special moves
+    
+    // King move invalidates all castling rights for that side
     if (pt == KING) {
-        // King move invalidates castling
         m_castle_rights &= (m_side == WHITE) ? 0b1100 : 0b0011;
     }
 
+    // Update halfmove clock and en passant square
     if (pt == PAWN) {
         m_halfmove = 0;
-        // Double advance - set en passant
-        if (abs(static_cast<int>(to) - static_cast<int>(from)) == 16) {
+        if (is_double_push) {
+            // Set en passant square (the square the pawn passed through)
             Square ep_sq = static_cast<Square>((from + to) / 2);
             m_en_passant = ep_sq;
         } else {
             m_en_passant = 64;
         }
     } else {
-        m_halfmove++;
+        if (!is_capture) {
+            m_halfmove++;
+        }
         m_en_passant = 64;
     }
 
