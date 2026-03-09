@@ -14,25 +14,107 @@ enum Color : uint8_t {
 typedef uint8_t Square;
 typedef uint64_t Bitboard;
 
-struct Move {
-    uint16_t data;
-    Move() : data(0) {}
-    Move(uint16_t d) : data(d) {}
-    uint16_t from() const { return (data >> 0) & 0x3F; }
-    uint16_t to() const { return (data >> 6) & 0x3F; }
-    uint16_t piece() const { return (data >> 12) & 0x07; }
-    uint16_t promotion() const { return (data >> 15) & 0x01; }
-    void set_from(uint16_t f) { data = (data & 0xFFC0) | (f & 0x3F); }
-    void set_to(uint16_t t) { data = (data & 0xFC3F) | ((t & 0x3F) << 6); }
-    void set_piece(uint16_t p) { data = (data & 0x8FFF) | ((p & 0x07) << 12); }
-    void set_promotion(uint16_t prom) { data = (data & 0xFFFE) | ((prom & 0x01) << 15); }
-    bool is_promotion() const { return promotion() != 0; }
-    bool is_capture() const { return false; }
+// Move type flags (4 bits)
+// Bits 12-15 encode move type:
+// Bit 15: capture flag
+// Bits 12-14: special move type (0=quiet, 1=double push, 2=castle KS, 3=castle QS, 4=en passant, 5-8=promotions)
+enum MoveType : uint16_t {
+    QUIET       = 0,      // 0000 - quiet move
+    DOUBLE_PUSH = 1,      // 0001 - pawn double push
+    CASTLE_KS   = 2,      // 0010 - kingside castle
+    CASTLE_QS   = 3,      // 0011 - queenside castle
+    EN_PASSANT  = 4,      // 0100 - en passant capture
+    PROMO_N     = 5,      // 0101 - knight promotion
+    PROMO_B     = 6,      // 0110 - bishop promotion
+    PROMO_R     = 7,      // 0111 - rook promotion
+    PROMO_Q     = 8,      // 1000 - queen promotion
+    CAPTURE     = 0x8,    // 1000 bit - capture flag (can be ORed with move types 0-8)
+    // Combined capture+promotion types
+    PROMO_N_CAP = CAPTURE | PROMO_N,  // 1101
+    PROMO_B_CAP = CAPTURE | PROMO_B,  // 1110
+    PROMO_R_CAP = CAPTURE | PROMO_R,  // 1111
+    PROMO_Q_CAP = CAPTURE | PROMO_Q,  // 1000 (same as CAPTURE, use PROMOTION flag to distinguish)
 };
 
-enum SpecialMove : uint8_t {
-    NORMAL = 0, CASTLE_KS = 1, CASTLE_QS = 2, EN_PASSANT = 3
+// New Move structure:
+// Bits 0-5:  from square (6 bits)
+// Bits 6-11: to square (6 bits)
+// Bits 12-15: move type (4 bits) - encodes special moves, captures, and promotions
+struct Move {
+    uint16_t data;
+    
+    Move() : data(0) {}
+    Move(uint16_t d) : data(d) {}
+    
+    // Square accessors
+    uint16_t from() const { return data & 0x3F; }
+    uint16_t to() const { return (data >> 6) & 0x3F; }
+    uint16_t type() const { return (data >> 12) & 0x0F; }
+    
+    // Setters
+    void set_from(uint16_t f) { data = (data & 0xFFC0) | (f & 0x3F); }
+    void set_to(uint16_t t) { data = (data & 0xFC3F) | ((t & 0x3F) << 6); }
+    void set_type(uint16_t t) { data = (data & 0x0FFF) | ((t & 0x0F) << 12); }
+    
+    // Compatibility: piece() now returns move type for backward compatibility
+    // Deprecated - use type() instead
+    uint16_t piece() const { return type(); }
+    void set_piece(uint16_t p) { set_type(p); }
+    
+    // Move type queries
+    bool is_capture() const { return (data & (CAPTURE << 12)) != 0 || type() == EN_PASSANT; }
+    bool is_promotion() const { 
+        uint16_t t = type();
+        return t >= PROMO_N && t <= PROMO_Q;  // Promotions 5-8
+    }
+    bool is_quiet() const { return type() == QUIET; }
+    bool is_double_push() const { return type() == DOUBLE_PUSH; }
+    bool is_castle() const { 
+        uint16_t t = type();
+        return t == CASTLE_KS || t == CASTLE_QS; 
+    }
+    bool is_kingside_castle() const { return type() == CASTLE_KS; }
+    bool is_queenside_castle() const { return type() == CASTLE_QS; }
+    bool is_en_passant() const { return type() == EN_PASSANT; }
+    
+    // Get promotion piece type (returns NONE if not a promotion)
+    PieceType promotion_piece() const {
+        uint16_t t = type();
+        if (t == PROMO_N || t == PROMO_N_CAP) return KNIGHT;
+        if (t == PROMO_B || t == PROMO_B_CAP) return BISHOP;
+        if (t == PROMO_R || t == PROMO_R_CAP) return ROOK;
+        if (t == PROMO_Q || t == PROMO_Q_CAP) return QUEEN;
+        return NONE;
+    }
+    
+    // Set promotion type
+    void set_promotion(PieceType pt, bool is_cap = false) {
+        uint16_t base = 0;
+        switch (pt) {
+            case KNIGHT: base = PROMO_N; break;
+            case BISHOP: base = PROMO_B; break;
+            case ROOK:   base = PROMO_R; break;
+            case QUEEN:  base = PROMO_Q; break;
+            default: break;
+        }
+        if (is_cap) base |= CAPTURE;
+        set_type(base);
+    }
+    
+    // Compatibility: promotion() returns 1 if promotion, 0 otherwise
+    uint16_t promotion() const { return is_promotion() ? 1 : 0; }
+    void set_promotion(uint16_t prom) { 
+        // Deprecated - kept for compatibility
+        if (prom) set_type(PROMO_Q); 
+    }
+    
+    // Comparison operators
+    bool operator==(const Move& other) const { return data == other.data; }
+    bool operator!=(const Move& other) const { return data != other.data; }
+    bool is_valid() const { return data != 0; }
 };
+
+// Note: Legacy SpecialMove enum removed - use MoveType instead
 
 constexpr int BOARD_SIZE = 8;
 constexpr int NUM_SQUARES = 64;

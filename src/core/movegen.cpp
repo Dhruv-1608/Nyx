@@ -85,58 +85,66 @@ void MoveGenerator::gen_pawn_moves(Square sq, Color c, MoveList& list) const {
     int direction = (c == WHITE) ? 1 : -1;
     Color opponent = static_cast<Color>(1 - c);
     
-    // Forward moves
+    // Forward moves (non-captures)
     Square to = to_square(x, y + direction);
     if (on_board(x, y + direction) && !(m_board.all_pieces() & (1ULL << to))) {
+        // Promotion moves
         if ((c == WHITE && y + direction == 7) || (c == BLACK && y + direction == 0)) {
             for (int prom = QUEEN; prom >= KNIGHT; --prom) {
                 Move m;
                 m.set_from(sq);
                 m.set_to(to);
-                m.set_piece(static_cast<PieceType>(prom));
-                m.set_promotion(1);
+                m.set_type(static_cast<uint16_t>(PROMO_Q + (QUEEN - prom))); // PROMO_Q=8, PROMO_R=7, etc.
                 list.add_move(m);
             }
         } else {
+            // Normal quiet move
             Move m;
             m.set_from(sq);
             m.set_to(to);
-            m.set_piece(PAWN);
+            m.set_type(QUIET);
             list.add_move(m);
         }
+        
+        // Double push from starting rank
         if ((c == WHITE && y == 1) || (c == BLACK && y == 6)) {
             Square to2 = to_square(x, y + 2 * direction);
             if (!(m_board.all_pieces() & (1ULL << to2))) {
                 Move m2;
                 m2.set_from(sq);
                 m2.set_to(to2);
-                m2.set_piece(PAWN);
+                m2.set_type(DOUBLE_PUSH);
                 list.add_move(m2);
             }
         }
     }
 
-    // Captures
+    // Captures (diagonal)
     for (int d = 0; d < 2; ++d) {
         int nx = x + pawn_attack_dx[c][d];
         int ny = y + direction;
         if (on_board(nx, ny)) {
             Square target = to_square(nx, ny);
+            
+            // Normal captures
             if (m_board.all_pieces(opponent) & (1ULL << target)) {
+                // Promotion captures
                 if ((c == WHITE && ny == 7) || (c == BLACK && ny == 0)) {
                     for (int prom = QUEEN; prom >= KNIGHT; --prom) {
                         Move m;
                         m.set_from(sq);
                         m.set_to(target);
-                        m.set_piece(static_cast<PieceType>(prom));
-                        m.set_promotion(1);
+                        // Use capture+promotion types
+                        uint16_t promo_type = static_cast<uint16_t>(PROMO_Q + (QUEEN - prom)) | CAPTURE;
+                        m.set_type(promo_type);
                         list.add_move(m);
                     }
                 } else {
+                    // Normal capture
                     Move m;
                     m.set_from(sq);
                     m.set_to(target);
-                    m.set_piece(PAWN);
+                    m.set_type(CAPTURE);
                     list.add_move(m);
                 }
             }
@@ -146,7 +154,7 @@ void MoveGenerator::gen_pawn_moves(Square sq, Color c, MoveList& list) const {
                 Move m;
                 m.set_from(sq);
                 m.set_to(target);
-                m.set_piece(PAWN);
+                m.set_type(EN_PASSANT);
                 list.add_move(m);
             }
         }
@@ -158,7 +166,7 @@ void MoveGenerator::gen_knight_moves(Square sq, Color c, MoveList& list) const {
     int y = rank_of(sq);
     Color opponent = static_cast<Color>(1 - c);
     Bitboard their_pieces = m_board.all_pieces(opponent);
-    Bitboard empty = ~m_board.all_pieces();
+    Bitboard all_occ = m_board.all_pieces();
 
     for (int i = 0; i < 8; ++i) {
         int nx = x + knight_dx[i];
@@ -166,17 +174,19 @@ void MoveGenerator::gen_knight_moves(Square sq, Color c, MoveList& list) const {
         if (on_board(nx, ny)) {
             Square to = to_square(nx, ny);
             Bitboard to_bb = 1ULL << to;
-            if (empty & to_bb) {
+            if (!(all_occ & to_bb)) {
+                // Quiet move
                 Move m;
                 m.set_from(sq);
                 m.set_to(to);
-                m.set_piece(KNIGHT);
+                m.set_type(QUIET);
                 list.add_move(m);
             } else if (their_pieces & to_bb) {
+                // Capture
                 Move m;
                 m.set_from(sq);
                 m.set_to(to);
-                m.set_piece(KNIGHT);
+                m.set_type(CAPTURE);
                 list.add_move(m);
             }
         }
@@ -203,17 +213,19 @@ void MoveGenerator::gen_bishop_moves(Square sq, Color c, MoveList& list) const {
             Square to = to_square(nx, ny);
             Bitboard to_bb = 1ULL << to;
             if (!(all_occ & to_bb)) {
+                // Quiet move
                 Move m;
                 m.set_from(sq);
                 m.set_to(to);
-                m.set_piece(BISHOP);
+                m.set_type(QUIET);
                 list.add_move(m);
             } else {
                 if (their_pieces & to_bb) {
+                    // Capture
                     Move m;
                     m.set_from(sq);
                     m.set_to(to);
-                    m.set_piece(BISHOP);
+                    m.set_type(CAPTURE);
                     list.add_move(m);
                 }
                 break;
@@ -240,17 +252,19 @@ void MoveGenerator::gen_rook_moves(Square sq, Color c, MoveList& list) const {
             Square to = to_square(nx, ny);
             Bitboard to_bb = 1ULL << to;
             if (!(all_occ & to_bb)) {
+                // Quiet move
                 Move m;
                 m.set_from(sq);
                 m.set_to(to);
-                m.set_piece(ROOK);
+                m.set_type(QUIET);
                 list.add_move(m);
             } else {
                 if (their_pieces & to_bb) {
+                    // Capture
                     Move m;
                     m.set_from(sq);
                     m.set_to(to);
-                    m.set_piece(ROOK);
+                    m.set_type(CAPTURE);
                     list.add_move(m);
                 }
                 break;
@@ -271,7 +285,7 @@ void MoveGenerator::gen_king_moves(Square sq, Color c, MoveList& list) const {
     int y = rank_of(sq);
     Color opponent = static_cast<Color>(1 - c);
     Bitboard their_pieces = m_board.all_pieces(opponent);
-    Bitboard empty = ~m_board.all_pieces();
+    Bitboard all_occ = m_board.all_pieces();
 
     // Normal king moves
     for (int i = 0; i < 8; ++i) {
@@ -280,23 +294,25 @@ void MoveGenerator::gen_king_moves(Square sq, Color c, MoveList& list) const {
         if (on_board(nx, ny)) {
             Square to = to_square(nx, ny);
             Bitboard to_bb = 1ULL << to;
-            if (empty & to_bb) {
+            if (!(all_occ & to_bb)) {
+                // Quiet move
                 Move m;
                 m.set_from(sq);
                 m.set_to(to);
-                m.set_piece(KING);
+                m.set_type(QUIET);
                 list.add_move(m);
             } else if (their_pieces & to_bb) {
+                // Capture
                 Move m;
                 m.set_from(sq);
                 m.set_to(to);
-                m.set_piece(KING);
+                m.set_type(CAPTURE);
                 list.add_move(m);
             }
         }
     }
 
-    // Castling
+    // Castling - use CASTLE_KS and CASTLE_QS move types
     if (m_board.can_castle(c, true)) {
         // Kingside castling
         if (c == WHITE) {
@@ -305,7 +321,7 @@ void MoveGenerator::gen_king_moves(Square sq, Color c, MoveList& list) const {
                 Move m;
                 m.set_from(SQ_E1);
                 m.set_to(SQ_G1);
-                m.set_piece(KING);
+                m.set_type(CASTLE_KS);
                 list.add_move(m);
             }
         } else {
@@ -314,7 +330,7 @@ void MoveGenerator::gen_king_moves(Square sq, Color c, MoveList& list) const {
                 Move m;
                 m.set_from(SQ_E8);
                 m.set_to(SQ_G8);
-                m.set_piece(KING);
+                m.set_type(CASTLE_KS);
                 list.add_move(m);
             }
         }
@@ -329,7 +345,7 @@ void MoveGenerator::gen_king_moves(Square sq, Color c, MoveList& list) const {
                 Move m;
                 m.set_from(SQ_E1);
                 m.set_to(SQ_C1);
-                m.set_piece(KING);
+                m.set_type(CASTLE_QS);
                 list.add_move(m);
             }
         } else {
@@ -339,7 +355,7 @@ void MoveGenerator::gen_king_moves(Square sq, Color c, MoveList& list) const {
                 Move m;
                 m.set_from(SQ_E8);
                 m.set_to(SQ_C8);
-                m.set_piece(KING);
+                m.set_type(CASTLE_QS);
                 list.add_move(m);
             }
         }

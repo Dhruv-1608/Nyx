@@ -24,6 +24,18 @@ public:
     void unmake_move(const Move& move);
     std::string to_fen() const;
     Square find_king(Color c) const;
+    
+    // Get piece at a specific square (returns NONE if empty)
+    PieceType piece_at(Square sq) const {
+        for (int pt = 0; pt < NUM_PIECES; ++pt) {
+            for (int c = 0; c < NUM_COLORS; ++c) {
+                if (m_pieces[pt][c] & (1ULL << sq)) {
+                    return static_cast<PieceType>(pt);
+                }
+            }
+        }
+        return NONE;
+    }
 
 private:
     Bitboard m_pieces[NUM_PIECES][NUM_COLORS];
