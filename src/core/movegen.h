@@ -12,6 +12,8 @@ struct MoveList {
     void add_move(Move m) { moves.push_back(m); }
     size_t size() const { return moves.size(); }
     const Move& operator[](size_t i) const { return moves[i]; }
+    std::vector<Move>::const_iterator begin() const { return moves.begin(); }
+    std::vector<Move>::const_iterator end() const { return moves.end(); }
 };
 
 class MoveGenerator {

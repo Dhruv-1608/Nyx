@@ -80,6 +80,7 @@ void UCI::cmd_position(const std::string& args) {
             while (iss >> token) {
                 Move move;
                 if (parse_move(token, move)) {
+                    // Apply move directly - trust GUI sends valid moves
                     m_board.make_move(move);
                 }
             }
@@ -96,6 +97,7 @@ void UCI::cmd_position(const std::string& args) {
             while (iss >> token) {
                 Move move;
                 if (parse_move(token, move)) {
+                    // Apply move directly - trust GUI sends valid moves
                     m_board.make_move(move);
                 }
             }
@@ -244,41 +246,32 @@ bool UCI::parse_move(const std::string& str, Move& move) const {
     Square from = make_square(from_file, from_rank);
     Square to = make_square(to_file, to_rank);
 
-    move.set_from(from);
-    move.set_to(to);
-
-    // Find piece type - must exist on from square
+    // Validate piece exists on from square
     Color us = m_board.side_to_move();
-    PieceType pt = PAWN;
     bool found_piece = false;
-    
-    if (str.length() > 4) {
-        // Promotion move
-        char prom = str[4];
-        if (prom == 'q') pt = QUEEN;
-        else if (prom == 'r') pt = ROOK;
-        else if (prom == 'b') pt = BISHOP;
-        else if (prom == 'n') pt = KNIGHT;
-        else return false; // Invalid promotion piece
-        move.set_promotion(1);
-        found_piece = true;
-    }
-    
-    if (!found_piece) {
-        // Check board for piece at from square
-        for (int p = PAWN; p <= KING; ++p) {
-            if (m_board.pieces(static_cast<PieceType>(p), us) & (1ULL << from)) {
-                pt = static_cast<PieceType>(p);
-                found_piece = true;
-                break;
-            }
+    for (int p = PAWN; p <= KING; ++p) {
+        if (m_board.pieces(static_cast<PieceType>(p), us) & (1ULL << from)) {
+            found_piece = true;
+            break;
         }
     }
-
     if (!found_piece) {
         return false; // No piece on from square
     }
 
-    move.set_piece(pt);
+    move.set_from(from);
+    move.set_to(to);
+    move.set_type(QUIET); // Default - will be corrected by make_move
+
+    // Handle promotions
+    if (str.length() > 4) {
+        char prom = str[4];
+        if (prom == 'q') move.set_type(PROMO_Q);
+        else if (prom == 'r') move.set_type(PROMO_R);
+        else if (prom == 'b') move.set_type(PROMO_B);
+        else if (prom == 'n') move.set_type(PROMO_N);
+        else return false; // Invalid promotion piece
+    }
+
     return true;
 }

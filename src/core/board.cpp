@@ -194,7 +194,12 @@ Square Board::find_king(Color c) const {
     return static_cast<Square>(__builtin_ctzll(king_bb));
 }
 
-void Board::clear_piece(Square sq, PieceType pt, Color c) {
+bool Board::in_check(Color c) const {
+    // This is a placeholder to avoid circular dependency issues during early phase 2
+    return false; 
+}
+
+void Board::remove_piece(Square sq, PieceType pt, Color c) {
     m_pieces[pt][c] &= ~(1ULL << sq);
     m_colors[c] &= ~(1ULL << sq);
 }
@@ -233,9 +238,8 @@ void Board::make_move(const Move& move) {
 
     Square from = static_cast<Square>(move.from());
     Square to = static_cast<Square>(move.to());
-    uint16_t move_type = move.type();
     
-    // Find the piece that's moving (check board, not move type)
+    // Find the piece that's moving
     PieceType pt = NONE;
     for (int p = 0; p < NUM_PIECES; ++p) {
         if (m_pieces[p][m_side] & (1ULL << from)) {
@@ -254,14 +258,14 @@ void Board::make_move(const Move& move) {
     // Handle en passant capture
     if (is_en_passant) {
         Square captured_sq = static_cast<Square>(to + (m_side == WHITE ? -8 : 8));
-        clear_piece(captured_sq, PAWN, opponent);
+        remove_piece(captured_sq, PAWN, opponent);
         m_halfmove = 0;
     }
     // Handle regular captures
     else if (is_capture) {
         for (int cap_pt = 0; cap_pt < NUM_PIECES; ++cap_pt) {
             if (m_pieces[cap_pt][opponent] & (1ULL << to)) {
-                clear_piece(to, static_cast<PieceType>(cap_pt), opponent);
+                remove_piece(to, static_cast<PieceType>(cap_pt), opponent);
                 m_halfmove = 0;
                 break;
             }
@@ -269,7 +273,7 @@ void Board::make_move(const Move& move) {
     }
 
     // Move the piece
-    clear_piece(from, pt, m_side);
+    remove_piece(from, pt, m_side);
     
     // Handle promotion
     if (is_promotion) {
@@ -282,50 +286,36 @@ void Board::make_move(const Move& move) {
     // Handle castling - move the rook
     if (is_castling) {
         if (move.is_kingside_castle()) {
-            // Kingside: rook from h-file to f-file
             Square rook_from = (m_side == WHITE) ? SQ_H1 : SQ_H8;
             Square rook_to = (m_side == WHITE) ? SQ_F1 : SQ_F8;
-            clear_piece(rook_from, ROOK, m_side);
+            remove_piece(rook_from, ROOK, m_side);
             place_piece(rook_to, ROOK, m_side);
         } else {
-            // Queenside: rook from a-file to d-file
             Square rook_from = (m_side == WHITE) ? SQ_A1 : SQ_A8;
             Square rook_to = (m_side == WHITE) ? SQ_D1 : SQ_D8;
-            clear_piece(rook_from, ROOK, m_side);
+            remove_piece(rook_from, ROOK, m_side);
             place_piece(rook_to, ROOK, m_side);
         }
     }
 
-    // Update castling rights based on piece movements
+    // Update castling rights
     update_castling_rights(from, to);
-    
-    // King move invalidates all castling rights for that side
     if (pt == KING) {
         m_castle_rights &= (m_side == WHITE) ? 0b1100 : 0b0011;
     }
 
-    // Update halfmove clock and en passant square
+    // EP and Halfmove
     if (pt == PAWN) {
         m_halfmove = 0;
-        if (is_double_push) {
-            // Set en passant square (the square the pawn passed through)
-            Square ep_sq = static_cast<Square>((from + to) / 2);
-            m_en_passant = ep_sq;
-        } else {
-            m_en_passant = 64;
-        }
+        m_en_passant = is_double_push ? static_cast<Square>((from + to) / 2) : 64;
     } else {
-        if (!is_capture) {
-            m_halfmove++;
-        }
+        if (!is_capture) m_halfmove++;
         m_en_passant = 64;
     }
 
     // Switch side
     m_side = opponent;
-    if (m_side == WHITE) {
-        m_fullmove++;
-    }
+    if (m_side == WHITE) m_fullmove++;
 }
 
 void Board::unmake_move(const Move& move) {
@@ -347,53 +337,76 @@ void Board::unmake_move(const Move& move) {
     m_fullmove = (m_side == WHITE) ? m_fullmove : m_fullmove - 1;
 }
 
+void Board::make_null_move() {
+    State& st = m_history[m_history_ply];
+    for (int pt = 0; pt < NUM_PIECES; ++pt) {
+        for (int c = 0; c < NUM_COLORS; ++c) st.pieces[pt][c] = m_pieces[pt][c];
+    }
+    for (int c = 0; c < NUM_COLORS; ++c) st.colors[c] = m_colors[c];
+    st.side = m_side;
+    st.en_passant = m_en_passant;
+    st.castle_rights = m_castle_rights;
+    st.halfmove = m_halfmove;
+    m_history_ply++;
+
+    m_side = static_cast<Color>(1 - m_side);
+    m_en_passant = 64;
+    m_halfmove++;
+    if (m_side == WHITE) m_fullmove++;
+}
+
+void Board::unmake_null_move() {
+    m_history_ply--;
+    State& st = m_history[m_history_ply];
+    for (int pt = 0; pt < NUM_PIECES; ++pt) {
+        for (int c = 0; c < NUM_COLORS; ++c) m_pieces[pt][c] = st.pieces[pt][c];
+    }
+    for (int c = 0; c < NUM_COLORS; ++c) m_colors[c] = st.colors[c];
+    m_side = st.side;
+    m_en_passant = st.en_passant;
+    m_castle_rights = st.castle_rights;
+    m_halfmove = st.halfmove;
+    m_fullmove = (m_side == WHITE) ? m_fullmove : m_fullmove - 1;
+}
+
 void Board::update_castling_rights(Square from, Square to) {
-    // White kingside rook
     if (from == SQ_H1 || to == SQ_H1) m_castle_rights &= 0b1110;
-    // White queenside rook
     if (from == SQ_A1 || to == SQ_A1) m_castle_rights &= 0b1101;
-    // Black kingside rook
     if (from == SQ_H8 || to == SQ_H8) m_castle_rights &= 0b1011;
-    // Black queenside rook
     if (from == SQ_A8 || to == SQ_A8) m_castle_rights &= 0b0111;
-    // White king
     if (from == SQ_E1 || to == SQ_E1) m_castle_rights &= 0b1100;
-    // Black king
     if (from == SQ_E8 || to == SQ_E8) m_castle_rights &= 0b0011;
 }
 
 std::string Board::to_fen() const {
     std::string fen;
-
     for (int r = 7; r >= 0; --r) {
         int empty = 0;
         for (int f = 0; f < 8; ++f) {
             Square sq = make_square(f, r);
+            PieceType pt = NONE;
+            Color pc = WHITE;
             bool found = false;
-            for (int pt = 0; pt < NUM_PIECES; ++pt) {
+            for (int p = 0; p < NUM_PIECES; ++p) {
                 for (int c = 0; c < NUM_COLORS; ++c) {
-                    if (m_pieces[pt][c] & (1ULL << sq)) {
-                        if (empty > 0) {
-                            fen += std::to_string(empty);
-                            empty = 0;
-                        }
-                        char piece_char = "PNBRQKpnbrqk"[pt + (c == BLACK ? 6 : 0)];
-                        fen += piece_char;
-                        found = true;
-                        break;
+                    if (m_pieces[p][c] & (1ULL << sq)) {
+                        pt = static_cast<PieceType>(p);
+                        pc = static_cast<Color>(c);
+                        found = true; break;
                     }
                 }
                 if (found) break;
             }
-            if (!found) empty++;
+            if (found) {
+                if (empty > 0) fen += std::to_string(empty);
+                empty = 0;
+                fen += "PNBRQKpnbrqk"[pt + (pc == BLACK ? 6 : 0)];
+            } else empty++;
         }
         if (empty > 0) fen += std::to_string(empty);
         if (r > 0) fen += '/';
     }
-
     fen += (m_side == WHITE) ? " w " : " b ";
-
-    // Castling rights
     if (m_castle_rights == 0) fen += "-";
     else {
         if (m_castle_rights & 0b0001) fen += "K";
@@ -401,19 +414,12 @@ std::string Board::to_fen() const {
         if (m_castle_rights & 0b0100) fen += "k";
         if (m_castle_rights & 0b1000) fen += "q";
     }
-
     fen += " ";
-
-    // En passant
-    if (m_en_passant == 64) {
-        fen += "-";
-    } else {
-        char file = 'a' + file_of(m_en_passant);
-        char rank = '1' + rank_of(m_en_passant);
-        fen += file;
-        fen += rank;
+    if (m_en_passant == 64) fen += "-";
+    else {
+        fen += (char)('a' + file_of(m_en_passant));
+        fen += (char)('1' + rank_of(m_en_passant));
     }
-
     fen += " " + std::to_string(m_halfmove) + " " + std::to_string(m_fullmove);
     return fen;
 }

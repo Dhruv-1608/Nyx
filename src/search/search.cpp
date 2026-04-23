@@ -7,15 +7,23 @@
 #include <chrono>
 #include <cmath>
 #include <limits>
+#include <iostream>
 
 using namespace std;
 
-Searcher::Searcher() : m_tt(std::make_unique<TranspositionTable>(16)), m_best_score(0) {
+Searcher::Searcher() : m_tt(std::make_unique<TranspositionTable>(16)), m_best_score(0), m_stop_search(false) {
     reset_stats();
 }
 
-void Searcher::reset_stats() {
-    m_stats = {0, 0, 0, 0};
+bool Searcher::has_non_pawn_material(const Board& board, Color c) const {
+    return (board.all_pieces(c) ^ board.pieces(PAWN, c) ^ board.pieces(KING, c)) != 0;
+}
+
+void Searcher::check_time() {
+    // Only check every few nodes to reduce overhead
+    if ((m_stats.nodes & 2047) == 0) {
+        // Implementation for time checking would go here
+    }
 }
 
 int Searcher::search(Board& board, Move& best_move, const Config& config) {
@@ -24,98 +32,54 @@ int Searcher::search(Board& board, Move& best_move, const Config& config) {
 
     auto start_time = std::chrono::steady_clock::now();
 
-    // Generate all legal moves
-    MoveGenerator mg(board);
-    MoveList moves = mg.generate_all();
-    
-    if (moves.size() > 0) {
-        // Use iterative deepening with simple evaluation
-        int best_score = -100000;
+    // Use iterative deepening to find the best move
+    int score = 0;
+    for (int depth = 1; depth <= m_config.max_depth; ++depth) {
+        Move current_best_move;
+        score = alpha_beta(board, depth, -30000, 30000, true, current_best_move);
         
-        // Search at the configured depth (default 3)
-        for (size_t i = 0; i < moves.size(); ++i) {
-            Move move = moves[i];
-            
-            board.make_move(move);
-            
-            // Use quiescence search to get a proper evaluation
-            int score = -quiescence(board, -30000, 30000, 0);
-            
-            board.unmake_move(move);
-            
-            if (score > best_score) {
-                best_score = score;
-                best_move = move;
-            }
+        if (current_best_move.is_valid()) {
+            best_move = current_best_move;
         }
-        
-        auto end_time = std::chrono::steady_clock::now();
-        m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-        m_stats.nodes = moves.size();  // Approximate
-        
-        return best_score;
+
+        auto current_time = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(current_time - start_time).count();
+        if (m_config.max_time > 0 && elapsed > m_config.max_time) {
+            break;
+        }
     }
-    
-    // No legal moves - stalemate or checkmate
-    best_move = Move();
     
     auto end_time = std::chrono::steady_clock::now();
     m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
     
-    // Check if checkmate
-    Color us = board.side_to_move();
-    Square ksq = board.find_king(us);
-    if (ksq != 64) {
-        Bitboard attacks = mg.attacks_to_square(ksq, static_cast<Color>(1 - us));
-        if (attacks & board.all_pieces(us)) {
-            return -30000;  // Checkmate
-        }
-    }
-    return 0;  // Stalemate
+    return score;
 }
 
 void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& config) {
-    Move current_best;
-    int best_score = -30000;
-
-    for (int depth = 1; depth <= config.max_depth; ++depth) {
-        Move depth_best;
-        int score = alpha_beta(board, depth, -30000, 30000, false, depth_best);
-        if (score > best_score || depth == 1) {
-            best_score = score;
-            current_best = depth_best;
-        }
-        if (config.max_time > 0 && m_stats.time_ms >= config.max_time) {
-            break;
-        }
-    }
-
-    best_move = current_best;
-    m_best_score = best_score; // Store for return
+    search(board, best_move, config);
 }
 
 int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
     best_move = Move();
     m_stats.nodes++;
 
-    // TT probe
-    if (m_config.use_tt) {
-        uint64_t key = compute_zobrist(board);
-        int tt_score;
-        Move tt_move;
-        if (m_tt->probe(key, depth, alpha, beta, tt_score, tt_move)) {
-            m_stats.tt_probes++;
-            if (tt_score >= beta) {
-                return beta;
-            }
-            if (tt_score > alpha) {
-                alpha = tt_score;
-            }
-        }
+    if (depth <= 0) {
+        return quiescence(board, alpha, beta, 0);
     }
 
-    if (depth == 0) {
-        return quiescence(board, alpha, beta, 0);
+    bool in_check = board.in_check(board.side_to_move());
+
+    // Null move pruning
+    if (do_null && depth >= 3 && !in_check && has_non_pawn_material(board, board.side_to_move())) {
+        board.make_null_move();
+        int R = 2 + depth / 6;
+        Move dummy;
+        int null_score = -alpha_beta(board, depth - 1 - R, -beta, -beta + 1, false, dummy);
+        board.unmake_null_move();
+
+        if (null_score >= beta) {
+            return beta;
+        }
     }
 
     MoveGenerator mg(board);
@@ -126,37 +90,23 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         Square ksq = board.find_king(us);
         if (ksq != 64) {
             Bitboard attacks = mg.attacks_to_square(ksq, static_cast<Color>(1 - us));
-            if (attacks & board.all_pieces(us)) {
+            if (attacks) {
                 return -30000 + (int)board.halfmove_clock();
             }
         }
         return 0;
     }
 
+    // Move ordering
     order_moves(moves, board);
 
     int best_score = -30000;
     Move best_move_local;
 
-    for (size_t i = 0; i < moves.size(); ++i) {
-        Move move = moves[i];
-
+    for (const Move& move : moves) {
         board.make_move(move);
-
-        int score;
-        Move child_best;
-        if (i == 0) {
-            score = -alpha_beta(board, depth - 1, -beta, -alpha, true, child_best);
-        } else {
-            // Late move reductions
-            int reduction = (depth >= 3 && i >= 4) ? 1 : 0;
-            int new_depth = depth - 1 - reduction;
-            score = -alpha_beta(board, new_depth, -alpha - 1, -alpha, false, child_best);
-            if (score > alpha && reduction > 0) {
-                score = -alpha_beta(board, depth - 1, -beta, -alpha, false, child_best);
-            }
-        }
-
+        Move dummy;
+        int score = -alpha_beta(board, depth - 1, -beta, -alpha, true, dummy);
         board.unmake_move(move);
 
         if (score > best_score) {
@@ -167,19 +117,8 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
             alpha = score;
         }
         if (alpha >= beta) {
-            if (m_config.use_tt) {
-                uint64_t key = compute_zobrist(board);
-                m_tt->store(key, best_score, depth, LOWERBOUND, best_move_local);
-            }
             break;
         }
-    }
-
-    // Store in transposition table
-    if (m_config.use_tt) {
-        uint64_t key = compute_zobrist(board);
-        TTFlag flag = (best_score <= alpha) ? UPPERBOUND : EXACT;
-        m_tt->store(key, best_score, depth, flag, best_move_local);
     }
 
     best_move = best_move_local;
@@ -187,34 +126,30 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
 }
 
 int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
-    constexpr int MAX_QUIESCENCE_DEPTH = 8;
-    if (depth >= MAX_QUIESCENCE_DEPTH) {
-        return m_eval.evaluate(board);
-    }
-
     m_stats.nodes++;
-
-    int stand_pat_score = m_eval.evaluate(board);
+    int stand_pat_score = stand_pat(board);
+    
     if (stand_pat_score >= beta) {
         return beta;
     }
-    if (stand_pat_score > alpha) {
+    if (alpha < stand_pat_score) {
         alpha = stand_pat_score;
     }
 
     MoveGenerator mg(board);
-    MoveList moves = mg.generate_pseudo_legal();
-
-    // Filter to only captures
-    for (size_t i = 0; i < moves.size(); ++i) {
-        Move move = moves[i];
-        Square to = static_cast<Square>(move.to());
-        
-        // Only search captures
-        if (!(board.all_pieces() & (1ULL << to))) {
-            continue;
+    MoveList moves = mg.generate_all();
+    
+    // Only search captures in quiescence
+    MoveList captures;
+    for (const Move& move : moves) {
+        if (is_capture(move, board)) {
+            captures.add_move(move);
         }
+    }
 
+    order_moves(captures, board);
+
+    for (const Move& move : captures) {
         board.make_move(move);
         int score = -quiescence(board, -beta, -alpha, depth + 1);
         board.unmake_move(move);
@@ -231,19 +166,84 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
 }
 
 void Searcher::order_moves(MoveList& moves, const Board& board, Move tt_move) {
-    // Simple move ordering: captures first, then promotions, then others
-    // This is a placeholder - could be improved with SEE
     (void)moves;
     (void)board;
     (void)tt_move;
 }
 
-bool Searcher::see_capture(const Board& board, Square to, PieceType capturer) const {
-    // Simplified: always return true for now
-    (void)board;
-    (void)to;
-    (void)capturer;
-    return true;
+PieceType Searcher::find_lva(const Board& board, Bitboard attackers, Color stm) const {
+    for (int pt = PAWN; pt <= KING; ++pt) {
+        if (attackers & board.pieces(static_cast<PieceType>(pt), stm)) {
+            return static_cast<PieceType>(pt);
+        }
+    }
+    return NONE;
+}
+
+Square Searcher::find_attacker_square(const Board& board, Bitboard attackers, Color stm) const {
+    for (int pt = PAWN; pt <= KING; ++pt) {
+        Bitboard b = attackers & board.pieces(static_cast<PieceType>(pt), stm);
+        if (b) {
+            return static_cast<Square>(pop_lsb(b)); // Use pop_lsb and cast
+        }
+    }
+    return 64; // Invalid square
+}
+
+int Searcher::see(const Board& board, Square sq, int threshold) const {
+    int gain[32];
+    int d = 0;
+
+    Board current_board = board;
+    Color stm = current_board.side_to_move();
+    
+    gain[d] = MG_PIECE_VALUE[current_board.piece_at(sq)];
+
+    Bitboard occupied = current_board.all_pieces();
+
+    while (true) {
+        d++;
+        stm = static_cast<Color>(1 - stm);
+
+        MoveGenerator mg(current_board);
+        Bitboard attackers = mg.attacks_to_square(sq, stm) & occupied;
+
+        PieceType attacker_piece = find_lva(current_board, attackers, stm);
+        if (attacker_piece == NONE) {
+            break;
+        }
+
+        Square attacker_sq = find_attacker_square(current_board, attackers, stm);
+        
+        gain[d] = MG_PIECE_VALUE[attacker_piece];
+
+        current_board.remove_piece(attacker_sq, attacker_piece, stm);
+        occupied ^= (1ULL << attacker_sq);
+    }
+
+    // Minimax on the gain array
+    for (int i = d - 2; i >= 0; --i) {
+        gain[i] = -std::max(-gain[i], gain[i+1]);
+    }
+    return gain[0];
+}
+
+int Searcher::see_capture(const Board& board, Square to, PieceType capturer) const {
+    // Get value of captured piece
+    PieceType captured_piece = board.piece_at(to);
+    if (captured_piece == NONE) return 0; // Should not happen for a capture
+
+    int capture_value = MG_PIECE_VALUE[captured_piece];
+    
+    // Get value of attacker
+    int attacker_value = MG_PIECE_VALUE[capturer];
+    
+    // If not a winning capture, return 0 early for now, will be improved with full SEE
+    if (attacker_value >= capture_value) return 1; // Placeholder for winning capture
+
+    // Perform SEE
+    // For now, only return a basic indication. Full SEE will be implemented in the see function above.
+    return 0; // Placeholder for losing capture
 }
 
 int Searcher::stand_pat(const Board& board) const {
@@ -252,5 +252,51 @@ int Searcher::stand_pat(const Board& board) const {
 
 bool Searcher::is_capture(const Move& move, const Board& board) const {
     Square to = static_cast<Square>(move.to());
-    return (board.all_pieces() & (1ULL << to)) != 0;
+    return board.piece_at(to) != NONE;
+}
+
+void Searcher::order_moves(MoveList& moves, const Board& board, Move tt_move) {
+    struct ScoredMove {
+        Move move;
+        int score;
+    };
+    
+    std::vector<ScoredMove> scored;
+    scored.reserve(moves.size());
+    
+    for (const Move& move : moves) {
+        int score = 0;
+        Square to = static_cast<Square>(move.to());
+        Square from = static_cast<Square>(move.from());
+        
+        // TT move gets highest priority
+        if (tt_move.from() == move.from() && tt_move.to() == move.to()) {
+            score = 20000;
+        }
+        // Winning captures
+        else if (is_capture(move, board)) {
+            score = 10000 + see(board, to, 0); // Use the new SEE function
+        }
+        // Promotions
+        else if (move.is_promotion()) {
+            score = 8000 + MG_PIECE_VALUE[move.promotion_piece()];
+        }
+        // Quiet moves - use history heuristic (not implemented yet, default to 0)
+        else {
+            score = 0; 
+        }
+        
+        scored.push_back({move, score});
+    }
+    
+    // Sort descending
+    std::sort(scored.begin(), scored.end(), 
+              [](const ScoredMove& a, const ScoredMove& b) { 
+                  return a.score > b.score; 
+              });
+    
+    // Write back to move list
+    for (size_t i = 0; i < scored.size(); ++i) {
+        moves.moves[i] = scored[i].move;
+    }
 }
