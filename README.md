@@ -82,6 +82,24 @@ make run-tests
 ## Project Structure
 
 ```
++------------------+
+|   Interface      | (UCI, CLI)
++--------+---------+
+         |
++--------v---------+
+|    Search        | (Alpha-beta, Aspiration, Pruning)
++--------+---------+
+         |
++--------v---------+
+|    Evaluation    | (PST, Mobility, King Safety)
++--------+---------+
+         |
++--------v---------+
+|      Core        | (Board, Movegen, Types)
++------------------+
+```
+
+```
 nyx/
 ├── src/
 │   ├── core/           # Core chess logic

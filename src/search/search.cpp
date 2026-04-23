@@ -15,6 +15,10 @@ Searcher::Searcher() : m_tt(std::make_unique<TranspositionTable>(16)), m_best_sc
     reset_stats();
 }
 
+void Searcher::reset_stats() {
+    m_stats = {0, 0, 0, 0};
+}
+
 bool Searcher::has_non_pawn_material(const Board& board, Color c) const {
     return (board.all_pieces(c) ^ board.pieces(PAWN, c) ^ board.pieces(KING, c)) != 0;
 }
@@ -92,7 +96,7 @@ int Searcher::alpha_beta_internal(Board& board, int depth, int alpha, int beta, 
 
     MoveGenerator mg(board);
     MoveList moves = mg.generate_all();
-
+    
     if (moves.size() == 0) {
         Color us = board.side_to_move();
         Square ksq = board.find_king(us);
@@ -207,12 +211,6 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
     }
 
     return alpha;
-}
-
-void Searcher::order_moves(MoveList& moves, const Board& board, Move tt_move) {
-    (void)moves;
-    (void)board;
-    (void)tt_move;
 }
 
 PieceType Searcher::find_lva(const Board& board, Bitboard attackers, Color stm) const {

@@ -1,4 +1,5 @@
 #include "board.h"
+#include "movegen.h"
 #include <sstream>
 #include <algorithm>
 
@@ -195,8 +196,21 @@ Square Board::find_king(Color c) const {
 }
 
 bool Board::in_check(Color c) const {
-    // This is a placeholder to avoid circular dependency issues during early phase 2
-    return false; 
+    MoveGenerator mg(*this);
+    Square ksq = find_king(c);
+    if (ksq == 64) return false;
+    
+    Color opponent = static_cast<Color>(1 - c);
+    Bitboard attackers = mg.attacks_to_square(ksq, opponent);
+    
+    // We check if any of the opponent's pieces are among the squares attacking the king
+    for (int pt = PAWN; pt <= KING; ++pt) {
+        if (attackers & m_pieces[pt][opponent]) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 void Board::remove_piece(Square sq, PieceType pt, Color c) {

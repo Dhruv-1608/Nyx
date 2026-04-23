@@ -27,7 +27,6 @@ public:
     std::string to_fen() const;
     Square find_king(Color c) const;
     bool in_check(Color c) const;
-    Bitboard pieces(PieceType pt, Color c) const { return m_pieces[pt][c]; }
     
     // Get piece at a specific square (returns NONE if empty)
     PieceType piece_at(Square sq) const {
