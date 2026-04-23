@@ -59,7 +59,7 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
     search(board, best_move, config);
 }
 
-int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
+int Searcher::alpha_beta_internal(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
     best_move = Move();
     m_stats.nodes++;
 
@@ -74,10 +74,18 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         board.make_null_move();
         int R = 2 + depth / 6;
         Move dummy;
-        int null_score = -alpha_beta(board, depth - 1 - R, -beta, -beta + 1, false, dummy);
+        int null_score = -alpha_beta_internal(board, depth - 1 - R, -beta, -beta + 1, false, dummy);
         board.unmake_null_move();
 
         if (null_score >= beta) {
+            return beta;
+        }
+    }
+
+    // Futility pruning
+    if (depth <= 2 && !in_check) {
+        int stand_pat_score = stand_pat(board);
+        if (stand_pat_score >= beta + 150) {
             return beta;
         }
     }
@@ -106,7 +114,7 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
     for (const Move& move : moves) {
         board.make_move(move);
         Move dummy;
-        int score = -alpha_beta(board, depth - 1, -beta, -alpha, true, dummy);
+        int score = -alpha_beta_internal(board, depth - 1, -beta, -alpha, true, dummy);
         board.unmake_move(move);
 
         if (score > best_score) {
@@ -125,6 +133,36 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
     return best_score;
 }
 
+int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
+    // Aspiration windows
+    if (depth >= 3) {
+        int prev_score = 0; // Simplified for now, should use TT
+        int delta = 35; // Initial aspiration delta
+        
+        // Search with aspiration window
+        int new_alpha = std::max(-30000, alpha - delta);
+        int new_beta = std::min(30000, beta + delta);
+        
+        // Try multiple times with widening window
+        for (int i = 0; i < 4; ++i) {
+            int score = alpha_beta_internal(board, depth, new_alpha, new_beta, do_null, best_move);
+            
+            if (score <= new_alpha) {
+                new_beta = (new_alpha + new_beta) / 2;
+                new_alpha = std::max(-30000, new_alpha - delta);
+                delta *= 2;
+            } else if (score >= new_beta) {
+                new_beta = std::min(30000, new_beta + delta);
+                delta *= 2;
+            } else {
+                return score; // Exact score found
+            }
+        }
+    }
+    // Fall back to full window search
+    return alpha_beta_internal(board, depth, alpha, beta, do_null, best_move);
+}
+
 int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
     m_stats.nodes++;
     int stand_pat_score = stand_pat(board);
@@ -132,6 +170,12 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
     if (stand_pat_score >= beta) {
         return beta;
     }
+
+    // Delta pruning
+    if (stand_pat_score < alpha - 300 - depth * 50) {
+        return alpha;
+    }
+
     if (alpha < stand_pat_score) {
         alpha = stand_pat_score;
     }
