@@ -22,8 +22,12 @@ public:
     int fullmove_number() const { return m_fullmove; }
     void make_move(const Move& move);
     void unmake_move(const Move& move);
+    void make_null_move();
+    void unmake_null_move();
     std::string to_fen() const;
     Square find_king(Color c) const;
+    bool in_check(Color c) const;
+    Bitboard pieces(PieceType pt, Color c) const { return m_pieces[pt][c]; }
     
     // Get piece at a specific square (returns NONE if empty)
     PieceType piece_at(Square sq) const {
@@ -56,8 +60,10 @@ private:
     std::array<State, 256> m_history;
     int m_history_ply;
     void update_castling_rights(Square from, Square to);
-    void clear_piece(Square sq, PieceType pt, Color c);
+public:
+    void remove_piece(Square sq, PieceType pt, Color c);
     void place_piece(Square sq, PieceType pt, Color c);
+private:
 };
 
 #endif

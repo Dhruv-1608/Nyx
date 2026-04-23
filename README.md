@@ -1,18 +1,20 @@
-# Nyx Chess Engine
+# Nyx Chess Engine V2
 
-A modern, C++17-based chess engine with advanced evaluation, search algorithms, and UCI protocol support.
+Nyx is a high-performance UCI chess engine written in C++. Version 2 introduces modern search and evaluation techniques to significantly improve playing strength.
 
 ## Features
 
-- **Advanced Search**: Alpha-beta pruning with quiescence search
+- **Advanced Search**: 
+  - Alpha-beta pruning with quiescence search
+  - [x] Static Exchange Evaluation (SEE) for move ordering
+  - [x] Null Move Pruning (NMP) for deep tactical pruning
+  - [x] Iterative Deepening with Time Management
 - **Sophisticated Evaluation**:
-  - Piece-Square Tables (PST) for both middlegame and endgame
-  - Material counting
-  - Mobility evaluation
-  - King safety assessment
-  - Proper color symmetry (evaluation returns same value regardless of side to move)
-- **Move Generation**: Complete legal move generation including special moves (castling, en passant, promotion)
-- **UCI Protocol**: Full support for Universal Chess Interface for compatibility with GUIs like Arena, ChessBase, Scid vs PC
+  - Piece-Square Tables (PST) for middlegame and endgame
+  - [x] Enhanced Pawn Structure Analysis
+  - Material counting, Mobility, and King safety assessmen
+- **Move Generation**: Bitboard-based legal move generation
+- **UCI Protocol**: Full compatibility with chess GUIs (Arena, ChessBase, etc.)
 - **CLI Mode**: Command-line interface for direct interaction
 - **Comprehensive Tests**: Unit tests for evaluation, move generation, and search
 

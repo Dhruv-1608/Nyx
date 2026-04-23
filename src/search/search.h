@@ -37,9 +37,17 @@ private:
     int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
     int quiescence(Board& board, int alpha, int beta, int depth);
     void order_moves(MoveList& moves, const Board& board, Move tt_move = Move());
-    bool see_capture(const Board& board, Square to, PieceType capturer) const;
+    int see_capture(const Board& board, Square to, PieceType capturer) const;
     int  stand_pat(const Board& board) const;
+    void check_time();
+    bool m_stop_search;
+    PieceType find_lva(const Board& board, Bitboard attackers, Color stm) const;
+    Square find_attacker_square(const Board& board, Bitboard attackers, Color stm) const;
+
     bool is_capture(const Move& move, const Board& board) const;
+    bool has_non_pawn_material(const Board& board, Color c) const;
+    int see(const Board& board, Square sq, int threshold) const;
+
 };
 
 #endif

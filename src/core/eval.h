@@ -19,7 +19,6 @@ public:
 private:
     static const int16_t MG_PST[NUM_PIECES][NUM_SQUARES];
     static const int16_t EG_PST[NUM_PIECES][NUM_SQUARES];
-    static constexpr int MG_PIECE_VALUE[6] = { 100, 320, 330, 500, 900, 20000 };
     static constexpr int EG_PIECE_VALUE[6] = { 100, 320, 330, 500, 900, 20000 };
     static constexpr int PHASE_WEIGHTS[6] = { 0, 1, 1, 2, 4, 0 };
     int phase(const Board& board) const;
