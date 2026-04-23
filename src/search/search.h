@@ -34,6 +34,7 @@ private:
     Config m_config;
     Stats m_stats;
     int m_best_score;
+    int alpha_beta_internal(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
     int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
     int quiescence(Board& board, int alpha, int beta, int depth);
     void order_moves(MoveList& moves, const Board& board, Move tt_move = Move());
