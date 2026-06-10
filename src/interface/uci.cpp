@@ -179,7 +179,7 @@ void UCI::cmd_setoption(const std::string& args) {
     if (token == "value" && iss >> token) {
         if (option_name == "Hash") {
             try {
-                int size_mb = std::stoi(token);
+                (void)std::stoi(token); // TODO: Use size_mb for hash table sizing
                 m_searcher = std::make_unique<Searcher>();
             } catch (...) {
                 // Invalid value, ignore

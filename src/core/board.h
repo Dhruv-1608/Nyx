@@ -40,6 +40,12 @@ public:
         return NONE;
     }
 
+    Color color_at(Square sq) const {
+        if (m_colors[WHITE] & (1ULL << sq)) return WHITE;
+        if (m_colors[BLACK] & (1ULL << sq)) return BLACK;
+        return (Color)2;
+    }
+
 private:
     Bitboard m_pieces[NUM_PIECES][NUM_COLORS];
     Bitboard m_colors[NUM_COLORS];
@@ -55,13 +61,19 @@ private:
         Square en_passant;
         uint8_t castle_rights;
         int halfmove;
+        uint64_t zobrist_key; // Added Zobrist key to state history
     };
     std::array<State, 256> m_history;
     int m_history_ply;
     void update_castling_rights(Square from, Square to);
+
+    uint64_t m_zobrist_key; // Current Zobrist key
+
 public:
+    uint64_t zobrist_key() const { return m_zobrist_key; }
     void remove_piece(Square sq, PieceType pt, Color c);
     void place_piece(Square sq, PieceType pt, Color c);
+    uint64_t generate_zobrist_key() const;
 private:
 };
 

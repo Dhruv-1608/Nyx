@@ -15,6 +15,9 @@ SRCS = src/main.cpp \
        src/core/board.cpp \
        src/core/movegen.cpp \
        src/core/eval.cpp \
+       src/core/move_validator.cpp \
+       src/core/bitboards.cpp \
+       src/core/zobrist.cpp \
        src/search/transposition.cpp \
        src/search/search.cpp \
        src/interface/uci.cpp \

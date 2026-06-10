@@ -108,11 +108,11 @@ std::string CLI::move_to_string(const Move& move) const {
     s += 'a' + file_of(to);
     s += '1' + rank_of(to);
     if (move.is_promotion()) {
-        PieceType pt = static_cast<PieceType>(move.piece());
-        const char* prom_chars = "nbrq";
-        if (pt >= KNIGHT && pt <= QUEEN) {
-            s += prom_chars[pt - KNIGHT];
-        }
+        PieceType pt = move.promotion_piece();
+        if (pt == QUEEN) s += 'q';
+        else if (pt == ROOK) s += 'r';
+        else if (pt == BISHOP) s += 'b';
+        else if (pt == KNIGHT) s += 'n';
     }
     return s;
 }
@@ -131,16 +131,22 @@ bool CLI::parse_move(const std::string& str, Move& move) const {
     Square to = make_square(to_file, to_rank);
     move.set_from(from);
     move.set_to(to);
-    // Determine piece type from board
-    PieceType pt = PAWN;
+    
     Color us = m_board->side_to_move();
-    for (int p = PAWN; p <= KING; ++p) {
-        if (m_board->pieces(static_cast<PieceType>(p), us) & (1ULL << from)) {
-            pt = static_cast<PieceType>(p);
-            break;
-        }
+    Color opponent = static_cast<Color>(1 - us);
+    if (m_board->all_pieces(opponent) & (1ULL << to)) {
+        move.set_type(CAPTURE);
+    } else {
+        move.set_type(QUIET);
     }
-    move.set_piece(pt);
-    if (str.length() > 4) move.set_promotion(1);
+
+    if (str.length() > 4) {
+        char prom = str[4];
+        PieceType pt = QUEEN;
+        if (prom == 'n') pt = KNIGHT;
+        else if (prom == 'b') pt = BISHOP;
+        else if (prom == 'r') pt = ROOK;
+        move.set_promotion(pt, move.is_capture());
+    }
     return true;
 }

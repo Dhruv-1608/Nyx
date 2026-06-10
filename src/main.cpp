@@ -2,8 +2,12 @@
 #include <string>
 #include "interface/uci.h"
 #include "interface/cli.h"
+#include "core/bitboards.h"
+#include "core/zobrist.h"
 
 int main(int argc, char* argv[]) {
+    Bitboards::init();
+    Zobrist::init_keys();
     std::string mode = "uci";  // Default to UCI mode
     
     if (argc > 1) {

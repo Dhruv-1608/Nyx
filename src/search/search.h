@@ -7,6 +7,7 @@
 #include "eval.h"
 #include "transposition.h"
 #include <memory>
+#include <vector>
 
 class Searcher {
 public:
@@ -27,6 +28,9 @@ public:
     };
     Stats get_stats() const { return m_stats; }
     void reset_stats();
+    void stop() { m_stop_search = true; }
+    void add_history(uint64_t hash) { m_position_history.push_back(hash); }
+    void clear_history() { m_position_history.clear(); }
 
 private:
     std::unique_ptr<TranspositionTable> m_tt;
@@ -34,12 +38,14 @@ private:
     Config m_config;
     Stats m_stats;
     int m_best_score;
+    std::vector<uint64_t> m_position_history;
+    
     int alpha_beta_internal(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
     int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
     int quiescence(Board& board, int alpha, int beta, int depth);
     void order_moves(MoveList& moves, const Board& board, Move tt_move = Move());
     int see_capture(const Board& board, Square to, PieceType capturer) const;
-    int  stand_pat(const Board& board) const;
+    int stand_pat(const Board& board) const;
     void check_time();
     bool m_stop_search;
     PieceType find_lva(const Board& board, Bitboard attackers, Color stm) const;
@@ -48,7 +54,7 @@ private:
     bool is_capture(const Move& move, const Board& board) const;
     bool has_non_pawn_material(const Board& board, Color c) const;
     int see(const Board& board, Square sq, int threshold) const;
-
+    bool is_repetition(const Board& board) const;
 };
 
 #endif

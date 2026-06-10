@@ -24,6 +24,7 @@ public:
     MoveList generate_pseudo_legal() const;
     bool is_pseudo_legal(const Move& move) const;
     Bitboard attacks_to_square(Square sq, Color attacker) const;
+    bool in_check(Color c) const;
 
 private:
     const Board& m_board;
@@ -34,7 +35,6 @@ private:
     void gen_queen_moves(Square sq, Color c, MoveList& list) const;
     void gen_king_moves(Square sq, Color c, MoveList& list) const;
     Bitboard pawn_attacks(Square sq, Color c) const;
-    bool in_check(Color c) const;
     Square king_square(Color c) const;
     Bitboard bishop_moves_bb(Square sq, Bitboard occupied) const;
     Bitboard rook_moves_bb(Square sq, Bitboard occupied) const;
