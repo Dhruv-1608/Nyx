@@ -3,11 +3,22 @@
 #include "search.h"
 #include "eval.h"
 #include "movegen.h"
+#include "move_validator.h"
 #include "types.h"
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <algorithm>
+
+namespace {
+    std::string trim(const std::string& value) {
+        const std::string whitespace = " \t\r\n";
+        const size_t start = value.find_first_not_of(whitespace);
+        if (start == std::string::npos) return "";
+        const size_t end = value.find_last_not_of(whitespace);
+        return value.substr(start, end - start + 1);
+    }
+}
 
 UCI::UCI() : m_debug_mode(false), m_should_stop(false) {
     m_searcher = std::make_unique<Searcher>();
@@ -29,11 +40,11 @@ void UCI::run() {
         } else if (command == "position") {
             std::string args;
             std::getline(iss, args);
-            cmd_position(args);
+            cmd_position(trim(args));
         } else if (command == "go") {
             std::string args;
             std::getline(iss, args);
-            cmd_go(args);
+            cmd_go(trim(args));
         } else if (command == "stop") {
             cmd_stop();
         } else if (command == "quit") {
@@ -42,11 +53,11 @@ void UCI::run() {
         } else if (command == "debug") {
             std::string args;
             std::getline(iss, args);
-            cmd_debug(args);
+            cmd_debug(trim(args));
         } else if (command == "setoption") {
             std::string args;
             std::getline(iss, args);
-            cmd_setoption(args);
+            cmd_setoption(trim(args));
         } else if (command == "d") {
             std::cout << m_board.to_fen() << std::endl;
         } else if (command == "eval") {
@@ -76,12 +87,19 @@ void UCI::cmd_position(const std::string& args) {
 
     if (token == "startpos") {
         m_board.reset();
+        m_searcher->clear_history();
+        m_searcher->add_history(m_board.zobrist_key());
         if (iss >> token && token == "moves") {
             while (iss >> token) {
                 Move move;
-                if (parse_move(token, move)) {
-                    // Apply move directly - trust GUI sends valid moves
+                if (parse_and_validate_move(token, move)) {
                     m_board.make_move(move);
+                    m_searcher->add_history(m_board.zobrist_key());
+                } else {
+                    if (m_debug_mode) {
+                        send_info("Invalid move received: " + token);
+                    }
+                    break;
                 }
             }
         }
@@ -90,15 +108,22 @@ void UCI::cmd_position(const std::string& args) {
         while (iss >> token && token != "moves") {
             fen += token + " ";
         }
-        fen.pop_back(); // Remove trailing space
+        fen.pop_back();
         m_board.load_fen(fen);
+        m_searcher->clear_history();
+        m_searcher->add_history(m_board.zobrist_key());
 
         if (token == "moves") {
             while (iss >> token) {
                 Move move;
-                if (parse_move(token, move)) {
-                    // Apply move directly - trust GUI sends valid moves
+                if (parse_and_validate_move(token, move)) {
                     m_board.make_move(move);
+                    m_searcher->add_history(m_board.zobrist_key());
+                } else {
+                    if (m_debug_mode) {
+                        send_info("Invalid move received: " + token);
+                    }
+                    break;
                 }
             }
         }
@@ -109,7 +134,7 @@ void UCI::cmd_go(const std::string& args) {
     m_should_stop = false;
 
     Searcher::Config config;
-    config.max_depth = 3;  // Default to low depth for quick response
+    config.max_depth = 3;
     config.max_time = 0;
     config.use_tt = true;
 
@@ -118,18 +143,15 @@ void UCI::cmd_go(const std::string& args) {
     while (iss >> token) {
         if (token == "depth") {
             iss >> config.max_depth;
-            // Limit max depth to prevent hanging
             if (config.max_depth > 10) config.max_depth = 10;
         } else if (token == "movetime") {
             int ms;
             iss >> ms;
             config.max_time = ms;
-            // Convert to depth based on time
             if (ms < 1000) config.max_depth = 2;
             else if (ms < 3000) config.max_depth = 3;
             else if (ms < 10000) config.max_depth = 5;
         } else if (token == "wtime" || token == "btime") {
-            // Time management - use moderate depth
             config.max_depth = 5;
         }
     }
@@ -144,6 +166,17 @@ void UCI::cmd_go(const std::string& args) {
         send_info("Nodes: " + std::to_string(stats.nodes));
         send_info("Time: " + std::to_string(stats.time_ms) + "ms");
     }
+
+    Move validated_move = MoveValidator::validate_and_fix(m_board, best_move);
+    
+    if (m_debug_mode) {
+        MoveList legal_moves = MoveValidator::get_legal_moves(m_board);
+        send_info("Legal moves count: " + std::to_string(legal_moves.size()));
+        send_info("Search returned: " + move_to_uci(best_move));
+        send_info("Validated move: " + move_to_uci(validated_move));
+    }
+    
+    best_move = validated_move;
 
     send_best_move(move_to_uci(best_move));
 }
@@ -168,18 +201,16 @@ void UCI::cmd_setoption(const std::string& args) {
     std::string token;
     std::string option_name;
     
-    // Parse "name XXX"
     while (iss >> token) {
         if (token == "value") break;
         if (!option_name.empty()) option_name += " ";
         option_name += token;
     }
     
-    // Parse "value XXX"
     if (token == "value" && iss >> token) {
         if (option_name == "Hash") {
             try {
-                (void)std::stoi(token); // TODO: Use size_mb for hash table sizing
+                (void)std::stoi(token);
                 m_searcher = std::make_unique<Searcher>();
             } catch (...) {
                 // Invalid value, ignore
@@ -205,6 +236,10 @@ void UCI::send_best_move(const std::string& move) {
 }
 
 std::string UCI::move_to_uci(const Move& move) const {
+    if (!move.is_valid()) {
+        return "0000";
+    }
+    
     Square from = static_cast<Square>(move.from());
     Square to = static_cast<Square>(move.to());
 
@@ -220,7 +255,7 @@ std::string UCI::move_to_uci(const Move& move) const {
     uci += to_rank;
 
     if (move.is_promotion()) {
-        PieceType pt = static_cast<PieceType>(move.piece());
+        PieceType pt = move.promotion_piece();
         if (pt == QUEEN) uci += 'q';
         else if (pt == ROOK) uci += 'r';
         else if (pt == BISHOP) uci += 'b';
@@ -231,7 +266,7 @@ std::string UCI::move_to_uci(const Move& move) const {
 }
 
 bool UCI::parse_move(const std::string& str, Move& move) const {
-    if (str.length() < 4) return false;
+    if (str.length() < 4 || str.length() > 5) return false;
 
     int from_file = str[0] - 'a';
     int from_rank = str[1] - '1';
@@ -246,32 +281,80 @@ bool UCI::parse_move(const std::string& str, Move& move) const {
     Square from = make_square(from_file, from_rank);
     Square to = make_square(to_file, to_rank);
 
-    // Validate piece exists on from square
     Color us = m_board.side_to_move();
     bool found_piece = false;
+    PieceType pt_on_from = NONE;
     for (int p = PAWN; p <= KING; ++p) {
         if (m_board.pieces(static_cast<PieceType>(p), us) & (1ULL << from)) {
             found_piece = true;
+            pt_on_from = static_cast<PieceType>(p);
             break;
         }
     }
     if (!found_piece) {
-        return false; // No piece on from square
+        return false;
     }
 
     move.set_from(from);
     move.set_to(to);
-    move.set_type(QUIET); // Default - will be corrected by make_move
-
-    // Handle promotions
-    if (str.length() > 4) {
+    
+    if (str.length() == 5) {
         char prom = str[4];
-        if (prom == 'q') move.set_type(PROMO_Q);
-        else if (prom == 'r') move.set_type(PROMO_R);
-        else if (prom == 'b') move.set_type(PROMO_B);
-        else if (prom == 'n') move.set_type(PROMO_N);
-        else return false; // Invalid promotion piece
+        PieceType promo_piece = NONE;
+        if (prom == 'q') promo_piece = QUEEN;
+        else if (prom == 'r') promo_piece = ROOK;
+        else if (prom == 'b') promo_piece = BISHOP;
+        else if (prom == 'n') promo_piece = KNIGHT;
+        else return false;
+        
+        bool is_cap = (m_board.all_pieces(static_cast<Color>(1 - us)) & (1ULL << to)) != 0;
+        move.set_promotion(promo_piece, is_cap);
+        return true;
+    }
+    
+    if (from == SQ_E1 && to == SQ_G1 && us == WHITE) {
+        move.set_type(CASTLE_KS);
+        return true;
+    }
+    if (from == SQ_E1 && to == SQ_C1 && us == WHITE) {
+        move.set_type(CASTLE_QS);
+        return true;
+    }
+    if (from == SQ_E8 && to == SQ_G8 && us == BLACK) {
+        move.set_type(CASTLE_KS);
+        return true;
+    }
+    if (from == SQ_E8 && to == SQ_C8 && us == BLACK) {
+        move.set_type(CASTLE_QS);
+        return true;
+    }
+    
+    if (pt_on_from == PAWN) {
+        const int delta = static_cast<int>(to) - static_cast<int>(from);
+        if (delta == 16 || delta == -16) {
+            move.set_type(DOUBLE_PUSH);
+            return true;
+        }
+    }
+    
+    if (m_board.en_passant() == to && pt_on_from == PAWN) {
+        move.set_type(EN_PASSANT);
+        return true;
+    }
+    
+    if (m_board.all_pieces(static_cast<Color>(1 - us)) & (1ULL << to)) {
+        move.set_type(CAPTURE);
+    } else {
+        move.set_type(QUIET);
     }
 
     return true;
+}
+
+bool UCI::parse_and_validate_move(const std::string& str, Move& move) const {
+    if (!parse_move(str, move)) {
+        return false;
+    }
+
+    return MoveValidator::is_legal(m_board, move);
 }

@@ -28,6 +28,7 @@ private:
     void send_best_move(const std::string& move);
     std::string move_to_uci(const Move& move) const;
     bool parse_move(const std::string& str, Move& move) const;
+    bool parse_and_validate_move(const std::string& str, Move& move) const;
     Board m_board;
     std::unique_ptr<Searcher> m_searcher;
     bool m_debug_mode;
