@@ -274,7 +274,9 @@ int Evaluator::evaluate_material(const Board& board, Color c) const {
     for (int pt = 0; pt < NUM_PIECES; ++pt) {
         Bitboard bb = board.pieces(static_cast<PieceType>(pt), c);
         int count = __builtin_popcountll(bb);
-        score += MG_PIECE_VALUE[pt] * count;
+        if (pt < NUM_PIECES) {
+            score += MG_PIECE_VALUE[pt] * count;
+        }
     }
     return score;
 }
@@ -299,6 +301,7 @@ int Evaluator::evaluate_position(const Board& board, Color c) const {
 }
 
 int Evaluator::evaluate_mobility(const Board& board, Color c) const {
+    (void)c; // Suppress unused parameter warning
     MoveGenerator mg(board);
     MoveList moves = mg.generate_pseudo_legal();
     int mobility = 0;

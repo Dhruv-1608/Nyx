@@ -27,7 +27,6 @@ public:
     std::string to_fen() const;
     Square find_king(Color c) const;
     bool in_check(Color c) const;
-    Bitboard pieces(PieceType pt, Color c) const { return m_pieces[pt][c]; }
     
     // Get piece at a specific square (returns NONE if empty)
     PieceType piece_at(Square sq) const {
@@ -39,6 +38,12 @@ public:
             }
         }
         return NONE;
+    }
+
+    Color color_at(Square sq) const {
+        if (m_colors[WHITE] & (1ULL << sq)) return WHITE;
+        if (m_colors[BLACK] & (1ULL << sq)) return BLACK;
+        return (Color)2;
     }
 
 private:
@@ -56,13 +61,19 @@ private:
         Square en_passant;
         uint8_t castle_rights;
         int halfmove;
+        uint64_t zobrist_key; // Added Zobrist key to state history
     };
     std::array<State, 256> m_history;
     int m_history_ply;
     void update_castling_rights(Square from, Square to);
+
+    uint64_t m_zobrist_key; // Current Zobrist key
+
 public:
+    uint64_t zobrist_key() const { return m_zobrist_key; }
     void remove_piece(Square sq, PieceType pt, Color c);
     void place_piece(Square sq, PieceType pt, Color c);
+    uint64_t generate_zobrist_key() const;
 private:
 };
 

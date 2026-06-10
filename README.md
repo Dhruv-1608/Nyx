@@ -13,7 +13,8 @@ Nyx is a high-performance UCI chess engine written in C++. Version 2 introduces 
   - Piece-Square Tables (PST) for middlegame and endgame
   - [x] Enhanced Pawn Structure Analysis
   - Material counting, Mobility, and King safety assessmen
-- **Move Generation**: Bitboard-based legal move generation
+- **Move Generation**: Bitboard-based legal move generation with attack-table initialization
+- **Move Validation**: Strict UCI move parsing and legality checks to reject illegal input safely
 - **UCI Protocol**: Full compatibility with chess GUIs (Arena, ChessBase, etc.)
 - **CLI Mode**: Command-line interface for direct interaction
 - **Comprehensive Tests**: Unit tests for evaluation, move generation, and search
@@ -30,10 +31,10 @@ make
 
 ```bash
 # Build main engine
-g++ -std=c++17 -O3 -Wall -Wextra -Isrc/core -Isrc/search -Isrc/interface -o nyx src/main.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/search/transposition.cpp src/search/search.cpp src/interface/uci.cpp src/interface/cli.cpp
+g++ -std=c++17 -O3 -Wall -Wextra -Isrc/core -Isrc/search -Isrc/interface -o nyx.exe src/main.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/core/move_validator.cpp src/core/bitboards.cpp src/core/zobrist.cpp src/search/transposition.cpp src/search/search.cpp src/interface/uci.cpp src/interface/cli.cpp
 
 # Build test suite
-g++ -std=c++17 -O3 -Wall -Isrc/core -Isrc/search -Isrc/interface -o test_movegen tests/test_movegen.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp
+g++ -std=c++17 -O3 -Wall -Isrc/core -Isrc/search -Isrc/interface -o test_nyx.exe tests/test_movegen.cpp tests/test_eval.cpp tests/test_search.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/core/move_validator.cpp src/core/bitboards.cpp src/core/zobrist.cpp src/search/transposition.cpp src/search/search.cpp src/interface/uci.cpp src/interface/cli.cpp
 ```
 
 ### Clean Build
@@ -76,19 +77,40 @@ make test
 make run-tests
 
 # Or directly (Windows without make):
-./test_nyx
+./test_nyx.exe
 ```
 
 ## Project Structure
 
 ```
++------------------+
+|   Interface      | (UCI, CLI)
++--------+---------+
+         |
++--------v---------+
+|    Search        | (Alpha-beta, Aspiration, Pruning)
++--------+---------+
+         |
++--------v---------+
+|    Evaluation    | (PST, Mobility, King Safety)
++--------+---------+
+         |
++--------v---------+
+|      Core        | (Board, Movegen, Types)
++------------------+
+```
+
+```
 nyx/
 ├── src/
 │   ├── core/           # Core chess logic
-│   │   ├── board.cpp   # Board representation and move execution
-│   │   ├── movegen.cpp # Move generation
-│   │   ├── eval.cpp    # Position evaluation
-│   │   └── types.h     # Type definitions
+│   │   ├── board.cpp       # Board representation and move execution
+│   │   ├── bitboards.cpp   # Precomputed attack tables
+│   │   ├── movegen.cpp     # Move generation
+│   │   ├── move_validator.cpp # Legal move validation
+│   │   ├── eval.cpp        # Position evaluation
+│   │   ├── zobrist.cpp     # Zobrist hashing
+│   │   └── types.h         # Type definitions
 │   ├── search/         # Search algorithms
 │   │   ├── search.cpp  # Alpha-beta search
 │   │   └── transposition.cpp  # Transposition table
@@ -106,6 +128,12 @@ nyx/
 ```
 
 ## Recent Fixes
+
+### Issue #4: Illegal UCI Move Parsing (Fixed)
+- **Problem**: UCI `position` commands could be ignored or accept incorrectly typed moves, allowing illegal positions to reach search
+- **Cause**: Command arguments were not trimmed and pawn double-push UCI moves were parsed as quiet moves
+- **Solution**: Trim UCI command arguments, initialize attack tables during board setup, and validate parsed moves against legal move generation
+- **Status**: ✅ Fixed
 
 ### Move Encoding Bug (Fixed - March 2026)
 - **Problem**: `Move::is_capture()` always returned false, breaking move ordering

@@ -1,4 +1,7 @@
 #include "board.h"
+#include "bitboards.h"
+#include "movegen.h"
+#include "zobrist.h"
 #include <sstream>
 #include <algorithm>
 
@@ -25,6 +28,7 @@ namespace {
 
 Board::Board() {
     init_masks();
+    Bitboards::init();
     reset();
 }
 
@@ -67,6 +71,25 @@ void Board::reset() {
     m_halfmove = 0;
     m_fullmove = 1;
     m_history_ply = 0;
+    m_zobrist_key = generate_zobrist_key();
+}
+
+uint64_t Board::generate_zobrist_key() const {
+    uint64_t key = 0;
+    for (int pt = 0; pt < NUM_PIECES; ++pt) {
+        for (int c = 0; c < NUM_COLORS; ++c) {
+            Bitboard bb = m_pieces[pt][c];
+            while (bb) {
+                Square sq = static_cast<Square>(__builtin_ctzll(bb));
+                key ^= Zobrist::PieceKeys[pt][c][sq];
+                bb &= bb - 1;
+            }
+        }
+    }
+    if (m_en_passant != 64) key ^= Zobrist::EnPassantKeys[m_en_passant];
+    key ^= Zobrist::CastleKeys[m_castle_rights];
+    if (m_side == BLACK) key ^= Zobrist::SideToMoveKey;
+    return key;
 }
 
 bool Board::load_fen(const std::string& fen) {
@@ -132,7 +155,13 @@ bool Board::load_fen(const std::string& fen) {
 
     // Color
     if (!(ss >> token)) return false;
-    m_side = (token == "w") ? WHITE : BLACK;
+    if (token == "w") {
+        m_side = WHITE;
+    } else if (token == "b") {
+        m_side = BLACK;
+    } else {
+        return false; // Invalid side
+    }
 
     // Castling
     if (!(ss >> token)) return false;
@@ -175,6 +204,7 @@ bool Board::load_fen(const std::string& fen) {
     }
 
     m_history_ply = 0;
+    m_zobrist_key = generate_zobrist_key();
     return true;
 }
 
@@ -195,18 +225,33 @@ Square Board::find_king(Color c) const {
 }
 
 bool Board::in_check(Color c) const {
-    // This is a placeholder to avoid circular dependency issues during early phase 2
-    return false; 
+    MoveGenerator mg(*this);
+    Square ksq = find_king(c);
+    if (ksq == 64) return false;
+    
+    Color opponent = static_cast<Color>(1 - c);
+    Bitboard attackers = mg.attacks_to_square(ksq, opponent);
+    
+    // We check if any of the opponent's pieces are among the squares attacking the king
+    for (int pt = PAWN; pt <= KING; ++pt) {
+        if (attackers & m_pieces[pt][opponent]) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 void Board::remove_piece(Square sq, PieceType pt, Color c) {
     m_pieces[pt][c] &= ~(1ULL << sq);
     m_colors[c] &= ~(1ULL << sq);
+    m_zobrist_key ^= Zobrist::PieceKeys[pt][c][sq];
 }
 
 void Board::place_piece(Square sq, PieceType pt, Color c) {
     m_pieces[pt][c] |= 1ULL << sq;
     m_colors[c] |= 1ULL << sq;
+    m_zobrist_key ^= Zobrist::PieceKeys[pt][c][sq];
 }
 
 // Helper function to find piece type at a square
@@ -222,6 +267,7 @@ PieceType piece_at_square(const Board& board, Square sq, Color c) {
 void Board::make_move(const Move& move) {
     // Save state
     State& st = m_history[m_history_ply];
+    st.zobrist_key = m_zobrist_key;
     for (int pt = 0; pt < NUM_PIECES; ++pt) {
         for (int c = 0; c < NUM_COLORS; ++c) {
             st.pieces[pt][c] = m_pieces[pt][c];
@@ -234,7 +280,13 @@ void Board::make_move(const Move& move) {
     st.en_passant = m_en_passant;
     st.castle_rights = m_castle_rights;
     st.halfmove = m_halfmove;
+    st.zobrist_key = m_zobrist_key; // Save Zobrist key
     m_history_ply++;
+
+    // Update Zobrist Key *before* modifying state elements that affect the key
+    m_zobrist_key ^= Zobrist::SideToMoveKey;
+    if (m_en_passant != 64) m_zobrist_key ^= Zobrist::EnPassantKeys[m_en_passant];
+    m_zobrist_key ^= Zobrist::CastleKeys[m_castle_rights];
 
     Square from = static_cast<Square>(move.from());
     Square to = static_cast<Square>(move.to());
@@ -255,17 +307,18 @@ void Board::make_move(const Move& move) {
     bool is_en_passant = move.is_en_passant();
     bool is_double_push = move.is_double_push();
 
-    // Handle en passant capture
+    // Handle regular captures
+    PieceType captured_pt = NONE;
     if (is_en_passant) {
         Square captured_sq = static_cast<Square>(to + (m_side == WHITE ? -8 : 8));
         remove_piece(captured_sq, PAWN, opponent);
         m_halfmove = 0;
-    }
-    // Handle regular captures
-    else if (is_capture) {
+    } else {
+        // Automatically detect capture if there's an opponent piece on the 'to' square
         for (int cap_pt = 0; cap_pt < NUM_PIECES; ++cap_pt) {
             if (m_pieces[cap_pt][opponent] & (1ULL << to)) {
-                remove_piece(to, static_cast<PieceType>(cap_pt), opponent);
+                captured_pt = static_cast<PieceType>(cap_pt);
+                remove_piece(to, captured_pt, opponent);
                 m_halfmove = 0;
                 break;
             }
@@ -319,6 +372,7 @@ void Board::make_move(const Move& move) {
 }
 
 void Board::unmake_move(const Move& move) {
+    (void)move; // Suppress unused parameter warning
     m_history_ply--;
     State& st = m_history[m_history_ply];
 
@@ -334,6 +388,7 @@ void Board::unmake_move(const Move& move) {
     m_en_passant = st.en_passant;
     m_castle_rights = st.castle_rights;
     m_halfmove = st.halfmove;
+    m_zobrist_key = st.zobrist_key; // Restore Zobrist key
     m_fullmove = (m_side == WHITE) ? m_fullmove : m_fullmove - 1;
 }
 
