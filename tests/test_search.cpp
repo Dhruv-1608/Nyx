@@ -3,7 +3,6 @@
 #include "search.h"
 
 void test_basic_search() {
-    std::cerr << "=== test_basic_search START ===" << std::endl;
     Board board;
     board.reset();
 
@@ -15,7 +14,6 @@ void test_basic_search() {
     Move best_move;
     int score = searcher.search(board, best_move, config);
 
-    std::cerr << "test_basic_search: score=" << score << " move.data=" << best_move.data << std::endl;
     std::cout << "Basic search (depth 3): score = " << score << std::endl;
     if (best_move.data != 0) {
         std::cout << "  Best move: " << best_move.from() << "->" << best_move.to() << std::endl;
@@ -23,7 +21,6 @@ void test_basic_search() {
     } else {
         std::cout << "  FAIL: No move found" << std::endl;
     }
-    std::cerr << "=== test_basic_search END ===" << std::endl;
 }
 
 void test_search_stats() {
