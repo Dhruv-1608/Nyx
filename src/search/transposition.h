@@ -36,6 +36,4 @@ private:
     size_t m_mask;
 };
 
-uint64_t compute_zobrist(const Board& board);
-
 #endif

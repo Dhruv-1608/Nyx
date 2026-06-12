@@ -5,16 +5,11 @@
 #include "transposition.h"
 #include <algorithm>
 #include <chrono>
-#include <iostream>
 
 using namespace std;
 
 Searcher::Searcher() : m_tt(std::make_unique<TranspositionTable>(16)), m_best_score(0), m_stop_search(false) {
     reset_stats();
-}
-
-void Searcher::reset_stats() {
-    m_stats = {0, 0, 0, 0};
 }
 
 bool Searcher::is_repetition(const Board& board) const {
@@ -26,28 +21,83 @@ bool Searcher::is_repetition(const Board& board) const {
     return count >= 2;
 }
 
+void Searcher::reset_stats() {
+    m_stats = {0, 0, 0, 0};
+}
+
 int Searcher::search(Board& board, Move& best_move, const Config& config) {
     m_config = config;
     reset_stats();
-    m_stop_search = false;
 
+    auto start_time = std::chrono::steady_clock::now();
+
+    // Iterative deepening
+    for (int depth = 1; depth <= config.max_depth; ++depth) {
+        int score = alpha_beta(board, depth, -30000, 30000, false, best_move);
+        m_best_score = score;
+    }
+
+    auto end_time = std::chrono::steady_clock::now();
+    m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+
+    return m_best_score;
+}
+
+void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& config) {
     Move current_best;
-    int score = alpha_beta(board, config.max_depth, -30000, 30000, true, current_best);
-    best_move = current_best;
-    return score;
+    int best_score = -30000;
+
+    for (int depth = 1; depth <= config.max_depth; ++depth) {
+        int score = alpha_beta(board, depth, -30000, 30000, false, current_best);
+
+        if (score > best_score || depth == 1) {
+            best_score = score;
+            best_move = current_best;
+            m_best_score = best_score;
+        }
+
+        if (config.max_time > 0 && m_stats.time_ms >= config.max_time) {
+            break;
+        }
+    }
 }
 
 int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
+    (void)do_null; // Not used currently - for null move pruning
     m_stats.nodes++;
-    
+
     if (is_repetition(board)) return 0;
-    if (depth <= 0) return m_eval.evaluate(board);
+
+    // Transposition table probe
+    if (m_config.use_tt) {
+        uint64_t key = board.zobrist_key();
+        int tt_score;
+        Move tt_move;
+        if (m_tt->probe(key, depth, alpha, beta, tt_score, tt_move)) {
+            m_stats.tt_probes++;
+            m_stats.tt_hits++;
+            if (tt_score >= beta) {
+                best_move = tt_move;
+                return beta;
+            }
+            if (tt_score > alpha) {
+                alpha = tt_score;
+            }
+        }
+    }
+
+    // Quiescence search at depth 0
+    if (depth == 0) {
+        return quiescence(board, alpha, beta, 0);
+    }
 
     MoveGenerator mg(board);
     MoveList moves = mg.generate_all();
-    
+
     if (moves.size() == 0) {
-        if (mg.in_check(board.side_to_move())) return -20000 - depth;
+        if (mg.in_check(board.side_to_move())) {
+            return -30000 - depth;
+        }
         return 0;
     }
 
@@ -73,5 +123,97 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
     }
 
     best_move = local_best;
+
+    // Store in transposition table
+    if (m_config.use_tt) {
+        uint64_t key = board.zobrist_key();
+        TTFlag flag = (best_score >= beta) ? LOWERBOUND : ((best_score <= alpha) ? UPPERBOUND : EXACT);
+        m_tt->store(key, best_score, depth, flag, best_move);
+    }
+
     return best_score;
+}
+
+int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
+    (void)depth;
+    m_stats.nodes++;
+
+    int stand_pat_score = m_eval.evaluate(board);
+    if (stand_pat_score >= beta) {
+        return beta;
+    }
+    if (stand_pat_score > alpha) {
+        alpha = stand_pat_score;
+    }
+
+    MoveGenerator mg(board);
+    MoveList moves = mg.generate_pseudo_legal();
+
+    for (const Move& move : moves.moves) {
+        Square to = static_cast<Square>(move.to());
+        if (!(board.all_pieces() & (1ULL << to))) {
+            continue;
+        }
+
+        board.make_move(move);
+        int score = -quiescence(board, -beta, -alpha, depth + 1);
+        board.unmake_move(move);
+
+        if (score >= beta) return beta;
+        if (score > alpha) alpha = score;
+    }
+
+    return alpha;
+}
+
+void Searcher::order_moves(MoveList& moves, const Board& board, Move tt_move) {
+    (void)moves;
+    (void)board;
+    (void)tt_move;
+}
+
+int Searcher::see_capture(const Board& board, Square to, PieceType capturer) const {
+    (void)board;
+    (void)to;
+    (void)capturer;
+    return 0;
+}
+
+int Searcher::stand_pat(const Board& board) const {
+    return m_eval.evaluate(board);
+}
+
+bool Searcher::is_capture(const Move& move, const Board& board) const {
+    Square to = static_cast<Square>(move.to());
+    return (board.all_pieces() & (1ULL << to)) != 0;
+}
+
+bool Searcher::has_non_pawn_material(const Board& board, Color c) const {
+    for (int pt = KNIGHT; pt <= QUEEN; ++pt) {
+        if (board.pieces(static_cast<PieceType>(pt), c) != 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int Searcher::see(const Board& board, Square sq, int threshold) const {
+    (void)board;
+    (void)sq;
+    (void)threshold;
+    return 0;
+}
+
+PieceType Searcher::find_lva(const Board& board, Bitboard attackers, Color stm) const {
+    (void)board;
+    (void)attackers;
+    (void)stm;
+    return PAWN;
+}
+
+Square Searcher::find_attacker_square(const Board& board, Bitboard attackers, Color stm) const {
+    (void)board;
+    (void)attackers;
+    (void)stm;
+    return 0;
 }

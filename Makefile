@@ -8,7 +8,7 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -O3 -Wall -Wextra -Wpedantic
 INCLUDES = -Isrc/core -Isrc/search -Isrc/interface
-LDFLAGS =
+LDFLAGS = 
 
 # Source files
 SRCS = src/main.cpp \
