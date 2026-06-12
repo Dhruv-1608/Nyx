@@ -301,7 +301,8 @@ int Evaluator::evaluate_position(const Board& board, Color c) const {
 }
 
 int Evaluator::evaluate_mobility(const Board& board, Color c) const {
-    (void)c; // Suppress unused parameter warning
+    (void)c;
+    int phase = this->phase(board);
     MoveGenerator mg(board);
     MoveList moves = mg.generate_pseudo_legal();
     int mobility = 0;
@@ -313,21 +314,22 @@ int Evaluator::evaluate_mobility(const Board& board, Color c) const {
         }
     }
 
-    return mobility * 10; // Mobility bonus
+    // Less mobility bonus in endgame (pieces naturally more active)
+    int multiplier = (phase <= 12) ? 15 : (phase >= 18 ? 5 : 10);
+    return mobility * multiplier;
 }
 
 int Evaluator::evaluate_king_safety(const Board& board, Color c) const {
     Square ksq = board.find_king(c);
     if (ksq == 64) return 0;
 
+    int phase = this->phase(board);
     int score = 0;
 
-    // Pawn shield
+    Bitboard our_pawns = board.pieces(PAWN, c);
     int x = file_of(ksq);
     int y = rank_of(ksq);
     int pawn_dir = (c == WHITE) ? 1 : -1;
-
-    Bitboard our_pawns = board.pieces(PAWN, c);
     int pawns_near = 0;
 
     for (int dx = -1; dx <= 1; ++dx) {
@@ -341,11 +343,13 @@ int Evaluator::evaluate_king_safety(const Board& board, Color c) const {
         }
     }
 
-    score += pawns_near * 20;
+    // Pawn shield matters less in endgame
+    int shield_bonus = (phase <= 12) ? 25 : (phase >= 18 ? 10 : 20);
+    score += pawns_near * shield_bonus;
 
     // Penalty for exposed king (fewer pawns)
     if (pawns_near < 2) {
-        score -= 30;
+        score -= (phase <= 12) ? 50 : (phase >= 18 ? 10 : 30);
     }
 
     return score;
