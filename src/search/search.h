@@ -8,6 +8,7 @@
 #include "transposition.h"
 #include <memory>
 #include <vector>
+#include <chrono>
 
 class Searcher {
 public:
@@ -39,14 +40,15 @@ private:
     Stats m_stats;
     int m_best_score;
     std::vector<uint64_t> m_position_history;
+    std::chrono::steady_clock::time_point m_start_time;
     
-    int alpha_beta_internal(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
     int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
     int quiescence(Board& board, int alpha, int beta, int depth);
+    int aspiration_search(Board& board, int depth, Move& best_move);
     void order_moves(MoveList& moves, const Board& board, Move tt_move = Move());
     int see_capture(const Board& board, Square to, PieceType capturer) const;
     int stand_pat(const Board& board) const;
-    void check_time();
+    bool check_time();
     bool m_stop_search;
     PieceType find_lva(const Board& board, Bitboard attackers, Color stm) const;
     Square find_attacker_square(const Board& board, Bitboard attackers, Color stm) const;

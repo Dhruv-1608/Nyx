@@ -76,19 +76,53 @@ void Searcher::reset_stats() {
 int Searcher::search(Board& board, Move& best_move, const Config& config) {
     m_config = config;
     reset_stats();
+    m_start_time = std::chrono::steady_clock::now();
+    m_stop_search = false;
 
-    auto start_time = std::chrono::steady_clock::now();
-
-    // Iterative deepening
     for (int depth = 1; depth <= config.max_depth; ++depth) {
-        int score = alpha_beta(board, depth, -30000, 30000, false, best_move);
+        if (check_time()) break;
+        int score = aspiration_search(board, depth, best_move);
         m_best_score = score;
     }
 
     auto end_time = std::chrono::steady_clock::now();
-    m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    m_stats.time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - m_start_time).count();
 
     return m_best_score;
+}
+
+bool Searcher::check_time() {
+    if (m_config.max_time <= 0) return false;
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_start_time).count();
+    if (elapsed >= m_config.max_time) {
+        m_stop_search = true;
+        return true;
+    }
+    return false;
+}
+
+int Searcher::aspiration_search(Board& board, int depth, Move& best_move) {
+    int alpha = -30000;
+    int beta = 30000;
+    
+    int score;
+    int max_attempts = 3;
+    
+    for (int attempt = 0; attempt < max_attempts; ++attempt) {
+        score = alpha_beta(board, depth, alpha, beta, false, best_move);
+        
+        if (score <= alpha) {
+            alpha = std::max(score - 50, -30000);
+            beta = (alpha + beta) / 2;
+        } else if (score >= beta) {
+            beta = std::min(score + 50, 30000);
+            alpha = (alpha + beta) / 2;
+        } else {
+            return score;
+        }
+    }
+    return score;
 }
 
 void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& config) {
@@ -111,16 +145,17 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
 }
 
 int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
-    (void)do_null;
     m_stats.nodes++;
+
+    if (m_stop_search) return 0;
 
     if (is_repetition(board)) return 0;
 
     // Transposition table probe
+    Move tt_move;
     if (m_config.use_tt) {
         uint64_t key = board.zobrist_key();
         int tt_score;
-        Move tt_move;
         if (m_tt->probe(key, depth, alpha, beta, tt_score, tt_move)) {
             m_stats.tt_probes++;
             m_stats.tt_hits++;
@@ -149,10 +184,12 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         return 0;
     }
 
-    // Sort moves by MVV-LVA (captures first)
+    // Sort moves - TT move first, then by MVV-LVA
     vector<pair<int, Move>> scored_moves;
     for (const Move& move : moves.moves) {
-        scored_moves.push_back({mvv_lva_score(board, move), move});
+        int score = mvv_lva_score(board, move);
+        if (move == tt_move) score += 10000; // Prioritize TT move
+        scored_moves.push_back({score, move});
     }
     sort(scored_moves.begin(), scored_moves.end(), [](const auto& a, const auto& b) {
         return a.first > b.first;
@@ -184,7 +221,7 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
     // Store in transposition table
     if (m_config.use_tt) {
         uint64_t key = board.zobrist_key();
-        TTFlag flag = (best_score >= beta) ? LOWERBOUND : ((best_score <= alpha) ? UPPERBOUND : EXACT);
+        TTFlag flag = (best_score >= beta) ? LOWERBOUND : ((best_score <= alpha && alpha < beta - 1) ? UPPERBOUND : EXACT);
         m_tt->store(key, best_score, depth, flag, best_move);
     }
 
@@ -204,15 +241,13 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
     }
 
     MoveGenerator mg(board);
-    MoveList moves = mg.generate_pseudo_legal();
 
-    // Sort captures by MVV-LVA
+    // Generate legal captures only
     vector<pair<int, Move>> scored_moves;
-    for (const Move& move : moves.moves) {
+    for (const Move& move : mg.generate_all().moves) {
         Square to = move.to();
-        if (board.all_pieces() & (1ULL << to)) { // Is capture
-            scored_moves.push_back({mvv_lva_score(board, move), move});
-        }
+        if (!(board.all_pieces() & (1ULL << to))) continue; // Not a capture
+        scored_moves.push_back({mvv_lva_score(board, move), move});
     }
     sort(scored_moves.begin(), scored_moves.end(), [](const auto& a, const auto& b) {
         return a.first > b.first;
