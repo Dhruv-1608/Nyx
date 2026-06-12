@@ -2,11 +2,59 @@
 #include "../core/board.h"
 #include "../core/movegen.h"
 #include "../core/eval.h"
+#include "../core/types.h"
 #include "transposition.h"
 #include <algorithm>
 #include <chrono>
 
 using namespace std;
+
+// MVV-LVA scores: victim - attacker
+static const int MVV_LVA[6][6] = {
+    {0,   0,   0,   0,   0,   0},   // Pawn capturing
+    {0,   0,  10,  20,  30,  40},   // Knight capturing
+    {0,  10,   0,  15,  25,  35},   // Bishop capturing
+    {0,  20,  15,   0,  20,  30},   // Rook capturing
+    {0,  30,  25,  20,   0,  10},   // Queen capturing
+    {0,  40,  35,  30,  10,   0}    // King capturing
+};
+
+static int mvv_lva_score(const Board& board, const Move& move) {
+    Square from = move.from();
+    Square to = move.to();
+    
+    Color us = board.side_to_move();
+    Color them = static_cast<Color>(1 - us);
+    
+    // Get attacker piece type
+    PieceType attacker = NONE;
+    for (int pt = PAWN; pt <= KING; ++pt) {
+        if (board.pieces(static_cast<PieceType>(pt), us) & (1ULL << from)) {
+            attacker = static_cast<PieceType>(pt);
+            break;
+        }
+    }
+    
+    // Get victim piece type
+    PieceType victim = NONE;
+    for (int pt = PAWN; pt <= KING; ++pt) {
+        if (board.pieces(static_cast<PieceType>(pt), them) & (1ULL << to)) {
+            victim = static_cast<PieceType>(pt);
+            break;
+        }
+    }
+    
+    if (victim != NONE && attacker != NONE) {
+        return MVV_LVA[victim][attacker];
+    }
+    
+    // Promotion bonus
+    if (move.is_promotion()) {
+        return 100;
+    }
+    
+    return 0;
+}
 
 Searcher::Searcher() : m_tt(std::make_unique<TranspositionTable>(16)), m_best_score(0), m_stop_search(false) {
     reset_stats();
@@ -63,7 +111,7 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
 }
 
 int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
-    (void)do_null; // Not used currently - for null move pruning
+    (void)do_null;
     m_stats.nodes++;
 
     if (is_repetition(board)) return 0;
@@ -101,21 +149,30 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         return 0;
     }
 
-    int best_score = -30000;
-    Move local_best = moves[0];
-
+    // Sort moves by MVV-LVA (captures first)
+    vector<pair<int, Move>> scored_moves;
     for (const Move& move : moves.moves) {
+        scored_moves.push_back({mvv_lva_score(board, move), move});
+    }
+    sort(scored_moves.begin(), scored_moves.end(), [](const auto& a, const auto& b) {
+        return a.first > b.first;
+    });
+
+    int best_score = -30000;
+    Move local_best = scored_moves[0].second;
+
+    for (const auto& [score, move] : scored_moves) {
         board.make_move(move);
         m_position_history.push_back(board.zobrist_key());
         
         Move dummy;
-        int score = -alpha_beta(board, depth - 1, -beta, -alpha, true, dummy);
+        int s = -alpha_beta(board, depth - 1, -beta, -alpha, true, dummy);
         
         m_position_history.pop_back();
         board.unmake_move(move);
 
-        if (score > best_score) {
-            best_score = score;
+        if (s > best_score) {
+            best_score = s;
             local_best = move;
         }
         alpha = max(alpha, best_score);
@@ -149,18 +206,25 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
     MoveGenerator mg(board);
     MoveList moves = mg.generate_pseudo_legal();
 
+    // Sort captures by MVV-LVA
+    vector<pair<int, Move>> scored_moves;
     for (const Move& move : moves.moves) {
-        Square to = static_cast<Square>(move.to());
-        if (!(board.all_pieces() & (1ULL << to))) {
-            continue;
+        Square to = move.to();
+        if (board.all_pieces() & (1ULL << to)) { // Is capture
+            scored_moves.push_back({mvv_lva_score(board, move), move});
         }
+    }
+    sort(scored_moves.begin(), scored_moves.end(), [](const auto& a, const auto& b) {
+        return a.first > b.first;
+    });
 
+    for (const auto& [score, move] : scored_moves) {
         board.make_move(move);
-        int score = -quiescence(board, -beta, -alpha, depth + 1);
+        int s = -quiescence(board, -beta, -alpha, depth + 1);
         board.unmake_move(move);
 
-        if (score >= beta) return beta;
-        if (score > alpha) alpha = score;
+        if (s >= beta) return beta;
+        if (s > alpha) alpha = s;
     }
 
     return alpha;
