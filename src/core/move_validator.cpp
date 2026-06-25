@@ -4,8 +4,14 @@ bool MoveValidator::is_legal(const Board& board, const Move& move) {
     MoveGenerator mg(board);
     MoveList legal_moves = mg.generate_all();
     
+    // Match on from/to squares and promotion status only.
+    // The move type (quiet, capture, castling) is determined by the board state
+    // and we don't want to reject a valid move due to a type mismatch in the caller.
     for (const Move& m : legal_moves) {
-        if (m.from() == move.from() && m.to() == move.to() && m.type() == move.type()) {
+        if (m.from() == move.from() && m.to() == move.to()) {
+            // For promotions, also match the promotion piece type
+            if (m.is_promotion() != move.is_promotion()) continue;
+            if (m.is_promotion() && m.promotion_piece() != move.promotion_piece()) continue;
             return true;
         }
     }

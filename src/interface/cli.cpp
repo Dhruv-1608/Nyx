@@ -1,6 +1,7 @@
 #include "cli.h"
 #include "board.h"
 #include "search.h"
+#include "move_validator.h"
 #include "types.h"
 #include <iostream>
 #include <sstream>
@@ -49,8 +50,7 @@ void CLI::run() {
 
         Move move;
         if (parse_move(input, move)) {
-            MoveGenerator mg(*m_board);
-            if (mg.is_pseudo_legal(move)) {
+            if (MoveValidator::is_legal(*m_board, move)) {
                 m_board->make_move(move);
             } else {
                 std::cout << "Illegal move" << std::endl;

@@ -40,7 +40,7 @@ MoveList MoveGenerator::generate_pseudo_legal() const {
     for (int pt = 0; pt < NUM_PIECES; ++pt) {
         Bitboard bb = m_board.pieces(static_cast<PieceType>(pt), us);
         while (bb) {
-            Square sq = static_cast<Square>(__builtin_ctzll(bb));
+            Square sq = static_cast<Square>(BitOps::ctzll(bb));
             bb &= bb - 1;
             switch (pt) {
                 case PAWN: gen_pawn_moves(sq, us, list); break;
@@ -72,7 +72,7 @@ void MoveGenerator::gen_pawn_moves(Square sq, Color c, MoveList& list) const {
 
     Bitboard push = (c == WHITE) ? (us << 8) : (us >> 8);
     if (!(push & all_occ)) {
-        Square to = static_cast<Square>(__builtin_ctzll(push));
+        Square to = static_cast<Square>(BitOps::ctzll(push));
         if ((c == WHITE && rank_of(to) == 7) || (c == BLACK && rank_of(to) == 0)) {
             for (int prom = QUEEN; prom >= KNIGHT; --prom) {
                 Move m; m.set_from(sq); m.set_to(to);
@@ -84,7 +84,7 @@ void MoveGenerator::gen_pawn_moves(Square sq, Color c, MoveList& list) const {
             list.add_move(m);
             Bitboard push2 = (c == WHITE) ? (push << 8) : (push >> 8);
             if (rank_of(sq) == start_rank && !(push2 & all_occ)) {
-                Move m2; m2.set_from(sq); m2.set_to(static_cast<Square>(__builtin_ctzll(push2)));
+                Move m2; m2.set_from(sq); m2.set_to(static_cast<Square>(BitOps::ctzll(push2)));
                 m2.set_type(DOUBLE_PUSH);
                 list.add_move(m2);
             }
@@ -93,7 +93,7 @@ void MoveGenerator::gen_pawn_moves(Square sq, Color c, MoveList& list) const {
 
     Bitboard captures = PawnAttacks[c][sq] & their_pieces;
     while (captures) {
-        Square to = static_cast<Square>(__builtin_ctzll(captures));
+        Square to = static_cast<Square>(BitOps::ctzll(captures));
         captures &= captures - 1;
         if ((c == WHITE && rank_of(to) == 7) || (c == BLACK && rank_of(to) == 0)) {
             for (int prom = QUEEN; prom >= KNIGHT; --prom) {
@@ -119,7 +119,7 @@ void MoveGenerator::gen_pawn_moves(Square sq, Color c, MoveList& list) const {
 void MoveGenerator::gen_knight_moves(Square sq, Color c, MoveList& list) const {
     Bitboard attacks = KnightAttacks[sq] & ~m_board.all_pieces(c);
     while (attacks) {
-        Square to = static_cast<Square>(__builtin_ctzll(attacks));
+        Square to = static_cast<Square>(BitOps::ctzll(attacks));
         attacks &= attacks - 1;
         Move m; m.set_from(sq); m.set_to(to);
         m.set_type((m_board.all_pieces(static_cast<Color>(1-c)) & (1ULL << to)) ? CAPTURE : QUIET);
@@ -130,7 +130,7 @@ void MoveGenerator::gen_knight_moves(Square sq, Color c, MoveList& list) const {
 void MoveGenerator::gen_bishop_moves(Square sq, Color c, MoveList& list) const {
     Bitboard attacks = bishop_moves_bb(sq, m_board.all_pieces()) & ~m_board.all_pieces(c);
     while (attacks) {
-        Square to = static_cast<Square>(__builtin_ctzll(attacks));
+        Square to = static_cast<Square>(BitOps::ctzll(attacks));
         attacks &= attacks - 1;
         Move m; m.set_from(sq); m.set_to(to);
         m.set_type((m_board.all_pieces(static_cast<Color>(1-c)) & (1ULL << to)) ? CAPTURE : QUIET);
@@ -141,7 +141,7 @@ void MoveGenerator::gen_bishop_moves(Square sq, Color c, MoveList& list) const {
 void MoveGenerator::gen_rook_moves(Square sq, Color c, MoveList& list) const {
     Bitboard attacks = rook_moves_bb(sq, m_board.all_pieces()) & ~m_board.all_pieces(c);
     while (attacks) {
-        Square to = static_cast<Square>(__builtin_ctzll(attacks));
+        Square to = static_cast<Square>(BitOps::ctzll(attacks));
         attacks &= attacks - 1;
         Move m; m.set_from(sq); m.set_to(to);
         m.set_type((m_board.all_pieces(static_cast<Color>(1-c)) & (1ULL << to)) ? CAPTURE : QUIET);
@@ -157,7 +157,7 @@ void MoveGenerator::gen_queen_moves(Square sq, Color c, MoveList& list) const {
 void MoveGenerator::gen_king_moves(Square sq, Color c, MoveList& list) const {
     Bitboard attacks = KingAttacks[sq] & ~m_board.all_pieces(c);
     while (attacks) {
-        Square to = static_cast<Square>(__builtin_ctzll(attacks));
+        Square to = static_cast<Square>(BitOps::ctzll(attacks));
         attacks &= attacks - 1;
         Move m; m.set_from(sq); m.set_to(to);
         m.set_type((m_board.all_pieces(static_cast<Color>(1-c)) & (1ULL << to)) ? CAPTURE : QUIET);

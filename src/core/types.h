@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <cstdint>
+#include "bitops.h"
 
 enum PieceType : uint8_t {
     PAWN = 0, KNIGHT = 1, BISHOP = 2, ROOK = 3, QUEEN = 4, KING = 5, NONE = 6
@@ -113,10 +114,8 @@ inline int file_of(Square s) { return s % 8; }
 inline int rank_of(Square s) { return s / 8; }
 inline Bitboard set_bit(Bitboard bb, Square s) { return bb | (1ULL << s); }
 inline Bitboard get_bit(Bitboard bb, Square s) { return (bb >> s) & 1ULL; }
-inline Bitboard pop_lsb(Bitboard& bb) {
-    Bitboard lsb = bb & -bb;
-    bb ^= lsb;
-    return lsb;
+inline int pop_lsb(Bitboard& bb) {
+    return BitOps::pop_lsb(bb);
 }
 
 #endif

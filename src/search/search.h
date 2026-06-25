@@ -8,6 +8,7 @@
 #include "transposition.h"
 #include <memory>
 #include <vector>
+#include <array>
 #include <chrono>
 
 class Searcher {
@@ -23,8 +24,12 @@ public:
     void iterative_deepening(Board& board, Move& best_move, const Config& config);
     struct Stats {
         uint64_t nodes;
+        uint64_t qnodes;          // Quiescence search nodes
         uint64_t tt_hits;
         uint64_t tt_probes;
+        uint64_t tt_cutoffs;      // Cutoffs from TT probe
+        uint64_t cutoffs;         // Beta cutoffs in main search
+        uint64_t repetitions;     // Repetitions detected
         int64_t time_ms;
     };
     Stats get_stats() const { return m_stats; }
@@ -32,6 +37,9 @@ public:
     void stop() { m_stop_search = true; }
     void add_history(uint64_t hash) { m_position_history.push_back(hash); }
     void clear_history() { m_position_history.clear(); }
+
+    // Access the principal variation line
+    const std::vector<Move>& pv_line() const { return m_pv_line; }
 
 private:
     std::unique_ptr<TranspositionTable> m_tt;
@@ -42,8 +50,14 @@ private:
     std::vector<uint64_t> m_position_history;
     std::chrono::steady_clock::time_point m_start_time;
     
-    int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move);
-    int quiescence(Board& board, int alpha, int beta, int depth);
+    // Principal Variation collection
+    static constexpr int MAX_PLIES = 128;
+    Move m_pv_table[MAX_PLIES][MAX_PLIES]; // [depth][ply]
+    int m_pv_length[MAX_PLIES];
+    std::vector<Move> m_pv_line;            // Best PV line from root
+
+    int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move, int ply = 0);
+    int quiescence(Board& board, int alpha, int beta, int depth, int ply = 0);
     int aspiration_search(Board& board, int depth, Move& best_move);
     void order_moves(MoveList& moves, const Board& board, Move tt_move = Move());
     int see_capture(const Board& board, Square to, PieceType capturer) const;

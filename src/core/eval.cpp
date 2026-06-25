@@ -273,7 +273,7 @@ int Evaluator::evaluate_material(const Board& board, Color c) const {
     int score = 0;
     for (int pt = 0; pt < NUM_PIECES; ++pt) {
         Bitboard bb = board.pieces(static_cast<PieceType>(pt), c);
-        int count = __builtin_popcountll(bb);
+        int count = BitOps::popcountll(bb);
         if (pt < NUM_PIECES) {
             score += MG_PIECE_VALUE[pt] * count;
         }
@@ -288,7 +288,7 @@ int Evaluator::evaluate_position(const Board& board, Color c) const {
     for (int pt = 0; pt < NUM_PIECES; ++pt) {
         Bitboard bb = board.pieces(static_cast<PieceType>(pt), c);
         while (bb) {
-            Square sq = static_cast<Square>(__builtin_ctzll(bb));
+            Square sq = static_cast<Square>(BitOps::ctzll(bb));
             bb &= bb - 1;
 
             Square mirror_sq = (c == BLACK) ? static_cast<Square>(63 - sq) : sq;
@@ -361,7 +361,7 @@ int Evaluator::phase(const Board& board) const {
         if (pt == KING) continue;
         Bitboard w = board.pieces(static_cast<PieceType>(pt), WHITE);
         Bitboard b = board.pieces(static_cast<PieceType>(pt), BLACK);
-        total += (__builtin_popcountll(w) + __builtin_popcountll(b)) * PHASE_WEIGHTS[pt];
+        total += (BitOps::popcountll(w) + BitOps::popcountll(b)) * PHASE_WEIGHTS[pt];
     }
     // Phase: 0 = opening/middlegame, 24 = endgame
     return std::min(24, total);
@@ -381,7 +381,7 @@ Bitboard Evaluator::attacked_squares(const Board& board, Color c) const {
     Bitboard pawns = board.pieces(PAWN, c);
     int pawn_dir = (c == WHITE) ? 1 : -1;
     while (pawns) {
-        Square sq = static_cast<Square>(__builtin_ctzll(pawns));
+        Square sq = static_cast<Square>(BitOps::ctzll(pawns));
         pawns &= pawns - 1;
         int x = file_of(sq);
         int y = rank_of(sq);
@@ -394,7 +394,7 @@ Bitboard Evaluator::attacked_squares(const Board& board, Color c) const {
     static constexpr int knight_dx[8] = { -2, -1, 1, 2, 2, 1, -1, -2 };
     static constexpr int knight_dy[8] = { 1, 2, 2, 1, -1, -2, -2, -1 };
     while (knights) {
-        Square sq = static_cast<Square>(__builtin_ctzll(knights));
+        Square sq = static_cast<Square>(BitOps::ctzll(knights));
         knights &= knights - 1;
         int x = file_of(sq);
         int y = rank_of(sq);
@@ -414,7 +414,7 @@ Bitboard Evaluator::attacked_squares(const Board& board, Color c) const {
 
     const int bishop_dirs[4] = { -9, -7, 7, 9 };
     while (diag_pieces) {
-        Square sq = static_cast<Square>(__builtin_ctzll(diag_pieces));
+        Square sq = static_cast<Square>(BitOps::ctzll(diag_pieces));
         diag_pieces &= diag_pieces - 1;
         for (int dir : bishop_dirs) {
             int s = static_cast<int>(sq) + dir;
@@ -436,7 +436,7 @@ Bitboard Evaluator::attacked_squares(const Board& board, Color c) const {
 
     const int rook_dirs[4] = { -8, -1, 1, 8 };
     while (ortho_pieces) {
-        Square sq = static_cast<Square>(__builtin_ctzll(ortho_pieces));
+        Square sq = static_cast<Square>(BitOps::ctzll(ortho_pieces));
         ortho_pieces &= ortho_pieces - 1;
         for (int dir : rook_dirs) {
             int s = static_cast<int>(sq) + dir;
