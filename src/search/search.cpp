@@ -70,7 +70,15 @@ bool Searcher::is_repetition(const Board& board) const {
 }
 
 void Searcher::reset_stats() {
-    m_stats = {0, 0, 0, 0};
+    m_stats = {0, 0, 0, 0, 0, 0, 0, 0};
+    // Clear PV tables
+    for (int i = 0; i < MAX_PLIES; ++i) {
+        m_pv_length[i] = 0;
+        for (int j = 0; j < MAX_PLIES; ++j) {
+            m_pv_table[i][j] = Move();
+        }
+    }
+    m_pv_line.clear();
 }
 
 int Searcher::search(Board& board, Move& best_move, const Config& config) {
@@ -83,6 +91,12 @@ int Searcher::search(Board& board, Move& best_move, const Config& config) {
         if (check_time()) break;
         int score = aspiration_search(board, depth, best_move);
         m_best_score = score;
+
+        // Extract PV line at this depth
+        m_pv_line.clear();
+        for (int i = 0; i < m_pv_length[0]; ++i) {
+            m_pv_line.push_back(m_pv_table[0][i]);
+        }
     }
 
     auto end_time = std::chrono::steady_clock::now();
@@ -110,7 +124,7 @@ int Searcher::aspiration_search(Board& board, int depth, Move& best_move) {
     int max_attempts = 3;
     
     for (int attempt = 0; attempt < max_attempts; ++attempt) {
-        score = alpha_beta(board, depth, alpha, beta, false, best_move);
+        score = alpha_beta(board, depth, alpha, beta, false, best_move, 0);
         
         if (score <= alpha) {
             alpha = std::max(score - 50, -30000);
@@ -130,12 +144,18 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
     int best_score = -30000;
 
     for (int depth = 1; depth <= config.max_depth; ++depth) {
-        int score = alpha_beta(board, depth, -30000, 30000, false, current_best);
+        int score = alpha_beta(board, depth, -30000, 30000, false, current_best, 0);
 
         if (score > best_score || depth == 1) {
             best_score = score;
             best_move = current_best;
             m_best_score = best_score;
+
+            // Extract PV line
+            m_pv_line.clear();
+            for (int i = 0; i < m_pv_length[0]; ++i) {
+                m_pv_line.push_back(m_pv_table[0][i]);
+            }
         }
 
         if (config.max_time > 0 && m_stats.time_ms >= config.max_time) {
@@ -144,12 +164,19 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
     }
 }
 
-int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move) {
+int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move, int ply) {
     m_stats.nodes++;
 
     if (m_stop_search) return 0;
 
-    if (is_repetition(board)) return 0;
+    // Repetition detection
+    if (is_repetition(board)) {
+        m_stats.repetitions++;
+        return 0;
+    }
+
+    // Initialize PV length for this node
+    m_pv_length[ply] = 0;
 
     // Transposition table probe
     Move tt_move;
@@ -160,6 +187,7 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
             m_stats.tt_probes++;
             m_stats.tt_hits++;
             if (tt_score >= beta) {
+                m_stats.tt_cutoffs++;
                 best_move = tt_move;
                 return beta;
             }
@@ -171,14 +199,14 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
 
     // Quiescence search at depth 0
     if (depth == 0) {
-        return quiescence(board, alpha, beta, 0);
+        return quiescence(board, alpha, beta, 0, ply);
     }
 
     MoveGenerator mg(board);
     MoveList moves = mg.generate_all();
 
     if (moves.size() == 0) {
-        if (mg.in_check(board.side_to_move())) {
+        if (board.in_check(board.side_to_move())) {
             return -30000 - depth;
         }
         return 0;
@@ -203,7 +231,7 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         m_position_history.push_back(board.zobrist_key());
         
         Move dummy;
-        int s = -alpha_beta(board, depth - 1, -beta, -alpha, true, dummy);
+        int s = -alpha_beta(board, depth - 1, -beta, -alpha, true, dummy, ply + 1);
         
         m_position_history.pop_back();
         board.unmake_move(move);
@@ -211,9 +239,19 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         if (s > best_score) {
             best_score = s;
             local_best = move;
+
+            // Update PV table: copy child's PV to this node's PV
+            m_pv_table[ply][0] = move;
+            for (int i = 0; i < m_pv_length[ply + 1]; ++i) {
+                m_pv_table[ply][i + 1] = m_pv_table[ply + 1][i];
+            }
+            m_pv_length[ply] = m_pv_length[ply + 1] + 1;
         }
         alpha = max(alpha, best_score);
-        if (alpha >= beta) break;
+        if (alpha >= beta) {
+            m_stats.cutoffs++;
+            break;
+        }
     }
 
     best_move = local_best;
@@ -228,9 +266,10 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
     return best_score;
 }
 
-int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
+int Searcher::quiescence(Board& board, int alpha, int beta, int depth, int ply) {
     (void)depth;
     m_stats.nodes++;
+    m_stats.qnodes++;
 
     int stand_pat_score = m_eval.evaluate(board);
     if (stand_pat_score >= beta) {
@@ -255,7 +294,7 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth) {
 
     for (const auto& [score, move] : scored_moves) {
         board.make_move(move);
-        int s = -quiescence(board, -beta, -alpha, depth + 1);
+        int s = -quiescence(board, -beta, -alpha, depth + 1, ply + 1);
         board.unmake_move(move);
 
         if (s >= beta) return beta;

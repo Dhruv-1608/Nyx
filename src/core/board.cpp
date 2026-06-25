@@ -80,7 +80,7 @@ uint64_t Board::generate_zobrist_key() const {
         for (int c = 0; c < NUM_COLORS; ++c) {
             Bitboard bb = m_pieces[pt][c];
             while (bb) {
-                Square sq = static_cast<Square>(__builtin_ctzll(bb));
+                Square sq = static_cast<Square>(BitOps::ctzll(bb));
                 key ^= Zobrist::PieceKeys[pt][c][sq];
                 bb &= bb - 1;
             }
@@ -221,7 +221,7 @@ bool Board::can_castle(Color c, bool kingside) const {
 Square Board::find_king(Color c) const {
     Bitboard king_bb = m_pieces[KING][c];
     if (king_bb == 0) return 64;
-    return static_cast<Square>(__builtin_ctzll(king_bb));
+    return static_cast<Square>(BitOps::ctzll(king_bb));
 }
 
 bool Board::in_check(Color c) const {
