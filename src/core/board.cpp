@@ -356,6 +356,7 @@ void Board::make_move(const Move& move) {
     if (pt == KING) {
         m_castle_rights &= (m_side == WHITE) ? 0b1100 : 0b0011;
     }
+    m_zobrist_key ^= Zobrist::CastleKeys[m_castle_rights];
 
     // EP and Halfmove
     if (pt == PAWN) {
