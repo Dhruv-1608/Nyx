@@ -1,194 +1,160 @@
-# Nyx Chess Engine V2
+# Nyx Chess Engine
 
-Nyx is a high-performance UCI chess engine written in C++. Version 2 introduces modern search and evaluation techniques to significantly improve playing strength.
+<div align="center">
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![C++](https://img.shields.io/badge/C%2B%2B-17-blue)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
 
-- **Advanced Search**: 
-  - Alpha-beta pruning with quiescence search
-  - [x] Static Exchange Evaluation (SEE) for move ordering
-  - [x] Null Move Pruning (NMP) for deep tactical pruning
-  - [x] Iterative Deepening with Time Management
-- **Sophisticated Evaluation**:
-  - Piece-Square Tables (PST) for middlegame and endgame
-  - [x] Enhanced Pawn Structure Analysis
-  - Material counting, Mobility, and King safety assessmen
-- **Move Generation**: Bitboard-based legal move generation with attack-table initialization
-- **Move Validation**: Strict UCI move parsing and legality checks to reject illegal input safely
-- **UCI Protocol**: Full compatibility with chess GUIs (Arena, ChessBase, etc.)
-- **CLI Mode**: Command-line interface for direct interaction
-- **Comprehensive Tests**: Unit tests for evaluation, move generation, and search
+**A high-performance UCI chess engine written in C++17**
 
-## Building
+</div>
 
-### Linux/macOS (with make)
+---
 
-```bash
-make
+## Overview
+
+Nyx is a bitboard-based chess engine with alpha-beta search, quiescence search, transposition tables, and iterative deepening with time management. It speaks the UCI protocol for compatibility with any chess GUI (Arena, ChessBase, etc.) and includes a built-in CLI for direct terminal play.
+
+---
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph Interface["Interface Layer"]
+        UCI["UCI Protocol<br/><i>uci.cpp</i>"]
+        CLI["CLI Mode<br/><i>cli.cpp</i>"]
+    end
+
+    subgraph Search["Search Layer"]
+        AB["Alpha-Beta Search<br/><i>search.cpp</i>"]
+        QS["Quiescence Search<br/><i>search.cpp</i>"]
+        TT["Transposition Table<br/><i>transposition.cpp</i>"]
+        AB --> QS
+        AB <--> TT
+    end
+
+    subgraph Evaluation["Evaluation Layer"]
+        EVAL["Evaluator<br/><i>eval.cpp</i>"]
+        PST["Piece-Square Tables"]
+        MOB["Mobility Scoring"]
+        KING["King Safety"]
+        EVAL --> PST
+        EVAL --> MOB
+        EVAL --> KING
+    end
+
+    subgraph Core["Core Layer"]
+        BOARD["Board Representation<br/><i>board.cpp</i>"]
+        MG["Move Generator<br/><i>movegen.cpp</i>"]
+        MV["Move Validator<br/><i>move_validator.cpp</i>"]
+        BB["Bitboard Attacks<br/><i>bitboards.cpp</i>"]
+        ZOB["Zobrist Hashing<br/><i>zobrist.cpp</i>"]
+        TYPES["Type System<br/><i>types.h</i>"]
+    end
+
+    UCI --> Search
+    CLI --> Search
+    Search --> Evaluation
+    Evaluation --> Core
+    Search --> Core
 ```
 
-### Windows (without make)
+### Data flow
 
-```bash
-# Build main engine
-g++ -std=c++17 -O3 -Wall -Wextra -Isrc/core -Isrc/search -Isrc/interface -o nyx.exe src/main.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/core/move_validator.cpp src/core/bitboards.cpp src/core/zobrist.cpp src/search/transposition.cpp src/search/search.cpp src/interface/uci.cpp src/interface/cli.cpp
+1. **Interface** receives a position (UCI `position` or CLI `board`/`move`) and delegates to Search
+2. **Search** explores the game tree using alpha-beta pruning, consulting the Transposition Table for cached results
+3. **Evaluation** scores leaf nodes by material, piece-square tables, mobility, and king safety
+4. **Core** provides bitboard move generation, legal move validation, and incremental board state updates
 
-# Build test suite
-g++ -std=c++17 -O3 -Wall -Isrc/core -Isrc/search -Isrc/interface -o test_nyx.exe tests/test_movegen.cpp tests/test_eval.cpp tests/test_search.cpp src/core/board.cpp src/core/movegen.cpp src/core/eval.cpp src/core/move_validator.cpp src/core/bitboards.cpp src/core/zobrist.cpp src/search/transposition.cpp src/search/search.cpp src/interface/uci.cpp src/interface/cli.cpp
-```
+---
 
-### Clean Build
-
-```bash
-# Linux/macOS
-make clean
-
-# Windows: manually delete .o files and executables
-del /f /q *.o src\core\*.o src\search\*.o src\interface\*.o tests\*.o nyx.exe test_nyx.exe 2>nul
-```
-
-## Usage
-
-### UCI Mode (for GUIs)
-
-```bash
-./nyx uci
-```
-
-### CLI Mode (command-line)
-
-```bash
-./nyx cli
-```
-
-In CLI mode, you can:
-- Type `board` to display the current board
-- Type `move <from><to>` to make a move (e.g., `move e2e4`)
-- Type `eval` to get position evaluation
-- Type `quit` to exit
-
-### Running Tests
-
-```bash
-# Build tests
-make test
-
-# Run tests
-make run-tests
-
-# Or directly (Windows without make):
-./test_nyx.exe
-```
-
-## Project Structure
-
-```
-+------------------+
-|   Interface      | (UCI, CLI)
-+--------+---------+
-         |
-+--------v---------+
-|    Search        | (Alpha-beta, Aspiration, Pruning)
-+--------+---------+
-         |
-+--------v---------+
-|    Evaluation    | (PST, Mobility, King Safety)
-+--------+---------+
-         |
-+--------v---------+
-|      Core        | (Board, Movegen, Types)
-+------------------+
-```
+## Project structure
 
 ```
 nyx/
 ├── src/
-│   ├── core/           # Core chess logic
-│   │   ├── board.cpp       # Board representation and move execution
-│   │   ├── bitboards.cpp   # Precomputed attack tables
-│   │   ├── movegen.cpp     # Move generation
-│   │   ├── move_validator.cpp # Legal move validation
-│   │   ├── eval.cpp        # Position evaluation
-│   │   ├── zobrist.cpp     # Zobrist hashing
-│   │   └── types.h         # Type definitions
-│   ├── search/         # Search algorithms
-│   │   ├── search.cpp  # Alpha-beta search
-│   │   └── transposition.cpp  # Transposition table
-│   └── interface/      # User interfaces
-│       ├── uci.cpp     # UCI protocol
-│       └── cli.cpp     # Command-line interface
-├── tests/              # Unit tests
-│   ├── test_eval.cpp   # Evaluation tests
-│   ├── test_movegen.cpp # Move generation tests
-│   └── test_search.cpp # Search tests
-├── docs/               # Documentation
-├── examples/           # Example positions
-├── Makefile            # Build configuration
-└── README.md           # This file
+│   ├── core/                  # Core chess primitives
+│   │   ├── board.cpp          # Board representation, make/unmake move, FEN
+│   │   ├── bitboards.cpp      # Precomputed sliding-piece attack tables
+│   │   ├── movegen.cpp        # Bitboard legal move generation
+│   │   ├── move_validator.cpp # UCI move parsing and legality checks
+│   │   ├── eval.cpp           # Position evaluation (material, PST, mobility, king safety)
+│   │   ├── zobrist.cpp        # Zobrist hashing implementation
+│   │   ├── bitops.h           # Portable popcount/ctz intrinsics (GCC, Clang, MSVC)
+│   │   └── types.h            # Enums, bitboard typedefs, square utilities
+│   ├── search/
+│   │   ├── search.cpp         # Alpha-beta, quiescence, aspiration, time management
+│   │   └── transposition.cpp  # Transposition table with Zobrist key storage
+│   └── interface/
+│       ├── uci.cpp            # UCI protocol handler
+│       └── cli.cpp            # Command-line REPL
+├── tests/                     # Unit test suites
+│   ├── test_movegen.cpp
+│   ├── test_eval.cpp
+│   └── test_search.cpp
+└── Makefile                   # Build system
 ```
 
-## Recent Fixes
+---
 
-### Issue #4: Illegal UCI Move Parsing (Fixed)
-- **Problem**: UCI `position` commands could be ignored or accept incorrectly typed moves, allowing illegal positions to reach search
-- **Cause**: Command arguments were not trimmed and pawn double-push UCI moves were parsed as quiet moves
-- **Solution**: Trim UCI command arguments, initialize attack tables during board setup, and validate parsed moves against legal move generation
-- **Status**: ✅ Fixed
+## Features
 
-### Move Encoding Bug (Fixed - March 2026)
-- **Problem**: `Move::is_capture()` always returned false, breaking move ordering
-- **Solution**: Implemented proper `MoveType` enum with capture detection
-- **Status**: ✅ Fixed
+### Search
+| Feature | Status |
+|---------|--------|
+| Alpha-beta pruning with PVS | Done |
+| Quiescence search (8-ply limit) | Done |
+| Transposition table (Zobrist-keyed) | Done |
+| Iterative deepening | Done |
+| Aspiration windows | Done |
+| Time management (`check_time()`) | Done |
+| Null move pruning | Done |
+| Principal Variation collection | Done |
+| Repetition detection | Done |
 
-### Promotion Encoding (Fixed - March 2026)
-- **Problem**: Promotion moves weren't properly encoded
-- **Solution**: Restructured move bits to handle all promotion types
-- **Status**: ✅ Fixed
+### Evaluation
+| Component | Description | Status |
+|-----------|-------------|--------|
+| Material | Piece value summation (P=100, N=320, B=330, R=500, Q=900) | Done |
+| Piece-Square Tables | Middlegame and endgame PST with game-phase interpolation | Done |
+| Mobility | Bonus per non-pawn legal move | Done |
+| King safety | Pawn shield bonus, exposed-king penalty | Done |
+| Game-phase tapering | Opening to endgame smooth blend | Done |
 
-### Issue #3: Evaluation Asymmetry (Fixed)
-- **Problem**: Test showed +170 for Black to move instead of ~0
-- **Cause**: Test used incorrect FEN with missing white pawn
-- **Solution**: Corrected test FEN to standard starting position
-- **Status**: ✅ Fixed - Evaluation is properly symmetric
+### Interface
+| Protocol | Description | Status |
+|----------|-------------|--------|
+| UCI | Full protocol for GUI integration | Done |
+| CLI | Interactive REPL with `board`/`move`/`eval` commands | Done |
 
-### Issue #2: Search Crash (Fixed)
-- **Problem**: Crash at depth 1 due to quiescence recursion overflow
-- **Solution**: Added maximum depth limit (8 levels) to quiescence search
-- **Status**: ✅ Fixed
+### Portability
+| Platform | Support |
+|----------|---------|
+| Linux / macOS | GCC / Clang, Makefile build |
+| Windows | MinGW-w64 (MSYS2) with CPU intrinsics dispatch |
 
-### Issue #1: Castling Bug (Fixed)
-- **Problem**: Rook didn't move during castling
-- **Solution**: Fixed test expectations; castling was working correctly
-- **Status**: ✅ Fixed
-
-## Technical Details
-
-### Evaluation Components
-
-The evaluation function combines multiple factors:
-
-1. **Material**: Sum of piece values (Pawn=100, Knight=320, Bishop=330, Rook=500, Queen=900)
-2. **Position**: Piece-Square Tables (PST) with proper mirroring for black pieces
-3. **Mobility**: Bonus for non-pawn moves (10 points per move)
-4. **King Safety**: Pawn shield bonus (20 per pawn) and penalty for exposed king (-30 if <2 pawns)
-
-The final score is interpolated between middlegame and endgame based on phase.
-
-### Search Algorithm
-
-- **Principal Variation Search** with alpha-beta pruning
-- **Quiescence search** to avoid horizon effects
-- **Transposition table** for position caching
-- **Iterative deepening** for time management
+---
 
 ## License
 
-Nyx is free and open source software licensed under the [MIT License](LICENSE).
+Nyx is open source software released under the [MIT License](LICENSE).
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Open an issue or submit a pull request on [GitHub](https://github.com/Dhruv-1608/Nyx).
+
+---
 
 ## Project Stats
 
 ![Alt](https://repobeats.axiom.co/api/embed/9b0b181fb1c6a4875d1db7d40ee9101f3ea82fc8.svg "Repobeats analytics image")
+
+---
+
+<div align="center">
+<sub>Built with ♟️ by Dhruv — powered by C++17 and bitboards</sub>
+</div>
