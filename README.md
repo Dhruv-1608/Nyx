@@ -22,36 +22,36 @@ Nyx is a bitboard-based chess engine with alpha-beta search, quiescence search, 
 
 ```mermaid
 graph TB
-    subgraph Interface["Interface Layer"]
-        UCI["UCI Protocol<br/><i>uci.cpp</i>"]
-        CLI["CLI Mode<br/><i>cli.cpp</i>"]
+    subgraph Interface[Interface Layer]
+        UCI[UCI Protocol - uci.cpp]
+        CLI[CLI Mode - cli.cpp]
     end
 
-    subgraph Search["Search Layer"]
-        AB["Alpha-Beta Search<br/><i>search.cpp</i>"]
-        QS["Quiescence Search<br/><i>search.cpp</i>"]
-        TT["Transposition Table<br/><i>transposition.cpp</i>"]
+    subgraph Search[Search Layer]
+        AB[Alpha-Beta Search - search.cpp]
+        QS[Quiescence Search - search.cpp]
+        TT[Transposition Table - transposition.cpp]
         AB --> QS
         AB <--> TT
     end
 
-    subgraph Evaluation["Evaluation Layer"]
-        EVAL["Evaluator<br/><i>eval.cpp</i>"]
-        PST["Piece-Square Tables"]
-        MOB["Mobility Scoring"]
-        KING["King Safety"]
+    subgraph Evaluation[Evaluation Layer]
+        EVAL[Evaluator - eval.cpp]
+        PST[Piece-Square Tables]
+        MOB[Mobility Scoring]
+        KING[King Safety]
         EVAL --> PST
         EVAL --> MOB
         EVAL --> KING
     end
 
-    subgraph Core["Core Layer"]
-        BOARD["Board Representation<br/><i>board.cpp</i>"]
-        MG["Move Generator<br/><i>movegen.cpp</i>"]
-        MV["Move Validator<br/><i>move_validator.cpp</i>"]
-        BB["Bitboard Attacks<br/><i>bitboards.cpp</i>"]
-        ZOB["Zobrist Hashing<br/><i>zobrist.cpp</i>"]
-        TYPES["Type System<br/><i>types.h</i>"]
+    subgraph Core[Core Layer]
+        BOARD[Board Representation - board.cpp]
+        MG[Move Generator - movegen.cpp]
+        MV[Move Validator - move_validator.cpp]
+        BB[Bitboard Attacks - bitboards.cpp]
+        ZOB[Zobrist Hashing - zobrist.cpp]
+        TYPES[Type System - types.h]
     end
 
     UCI --> Search
@@ -109,7 +109,7 @@ nyx/
 | Transposition table (Zobrist-keyed) | Done |
 | Iterative deepening | Done |
 | Aspiration windows | Done |
-| Time management (`check_time()`) | Done |
+| Time management (check_time) | Done |
 | Null move pruning | Done |
 | Principal Variation collection | Done |
 | Repetition detection | Done |
@@ -127,7 +127,7 @@ nyx/
 | Protocol | Description | Status |
 |----------|-------------|--------|
 | UCI | Full protocol for GUI integration | Done |
-| CLI | Interactive REPL with `board`/`move`/`eval` commands | Done |
+| CLI | Interactive REPL with board/move/eval commands | Done |
 
 ### Portability
 | Platform | Support |
