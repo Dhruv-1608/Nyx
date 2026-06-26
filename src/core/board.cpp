@@ -366,6 +366,8 @@ void Board::make_move(const Move& move) {
         if (!is_capture) m_halfmove++;
         m_en_passant = 64;
     }
+    // XOR in the new en passant square
+    if (m_en_passant != 64) m_zobrist_key ^= Zobrist::EnPassantKeys[m_en_passant];
 
     // Switch side
     m_side = opponent;
