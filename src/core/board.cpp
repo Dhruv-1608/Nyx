@@ -405,7 +405,12 @@ void Board::make_null_move() {
     st.en_passant = m_en_passant;
     st.castle_rights = m_castle_rights;
     st.halfmove = m_halfmove;
+    st.zobrist_key = m_zobrist_key; // Save Zobrist key
     m_history_ply++;
+
+    // Update zobrist key for side-to-move flip and en-passant clearing
+    m_zobrist_key ^= Zobrist::SideToMoveKey;
+    if (m_en_passant != 64) m_zobrist_key ^= Zobrist::EnPassantKeys[m_en_passant];
 
     m_side = static_cast<Color>(1 - m_side);
     m_en_passant = 64;
@@ -424,6 +429,7 @@ void Board::unmake_null_move() {
     m_en_passant = st.en_passant;
     m_castle_rights = st.castle_rights;
     m_halfmove = st.halfmove;
+    m_zobrist_key = st.zobrist_key; // Restore Zobrist key
     m_fullmove = (m_side == WHITE) ? m_fullmove : m_fullmove - 1;
 }
 
