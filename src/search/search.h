@@ -58,7 +58,7 @@ private:
 
     int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move, int ply = 0);
     int quiescence(Board& board, int alpha, int beta, int depth, int ply = 0);
-    int aspiration_search(Board& board, int depth, Move& best_move);
+    int aspiration_search(Board& board, int depth, Move& best_move, int prev_score = 0);
     void order_moves(MoveList& moves, const Board& board, Move tt_move = Move());
     int see_capture(const Board& board, Square to, PieceType capturer) const;
     int stand_pat(const Board& board) const;

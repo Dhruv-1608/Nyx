@@ -87,10 +87,12 @@ int Searcher::search(Board& board, Move& best_move, const Config& config) {
     m_start_time = std::chrono::steady_clock::now();
     m_stop_search = false;
 
+    int prev_score = 0;
     for (int depth = 1; depth <= config.max_depth; ++depth) {
         if (check_time()) break;
-        int score = aspiration_search(board, depth, best_move);
+        int score = aspiration_search(board, depth, best_move, prev_score);
         m_best_score = score;
+        prev_score = score;
 
         // Extract PV line at this depth
         m_pv_line.clear();
@@ -116,9 +118,10 @@ bool Searcher::check_time() {
     return false;
 }
 
-int Searcher::aspiration_search(Board& board, int depth, Move& best_move) {
-    int alpha = -30000;
-    int beta = 30000;
+int Searcher::aspiration_search(Board& board, int depth, Move& best_move, int prev_score) {
+    int window = 50;
+    int alpha = std::max(prev_score - window, -30000);
+    int beta  = std::min(prev_score + window,  30000);
     
     int score;
     int max_attempts = 3;
@@ -127,11 +130,13 @@ int Searcher::aspiration_search(Board& board, int depth, Move& best_move) {
         score = alpha_beta(board, depth, alpha, beta, false, best_move, 0);
         
         if (score <= alpha) {
-            alpha = std::max(score - 50, -30000);
-            beta = (alpha + beta) / 2;
+            alpha = std::max(score - window, -30000);
+            beta  = (alpha + beta) / 2;
+            window *= 2;
         } else if (score >= beta) {
-            beta = std::min(score + 50, 30000);
+            beta  = std::min(score + window, 30000);
             alpha = (alpha + beta) / 2;
+            window *= 2;
         } else {
             return score;
         }
@@ -165,6 +170,15 @@ void Searcher::iterative_deepening(Board& board, Move& best_move, const Config& 
 }
 
 int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move, int ply) {
+    if (depth >= 3 && do_null && !board.in_check(board.side_to_move()) && has_non_pawn_material(board, board.side_to_move())) {
+        board.make_null_move();
+        m_position_history.push_back(board.zobrist_key());
+        Move dummy;
+        int s = -alpha_beta(board, depth - 1 - 2, -beta, -beta + 1, false, dummy, ply + 1);
+        m_position_history.pop_back();
+        board.unmake_null_move();
+        if (s >= beta) return beta;
+    }
     m_stats.nodes++;
 
     if (m_stop_search) return 0;

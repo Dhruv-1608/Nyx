@@ -267,7 +267,6 @@ PieceType piece_at_square(const Board& board, Square sq, Color c) {
 void Board::make_move(const Move& move) {
     // Save state
     State& st = m_history[m_history_ply];
-    st.zobrist_key = m_zobrist_key;
     for (int pt = 0; pt < NUM_PIECES; ++pt) {
         for (int c = 0; c < NUM_COLORS; ++c) {
             st.pieces[pt][c] = m_pieces[pt][c];
