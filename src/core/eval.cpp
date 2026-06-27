@@ -246,9 +246,10 @@ int Evaluator::evaluate(const Board& board) const {
     Color us = board.side_to_move();
     Color them = static_cast<Color>(1 - us);
 
-    int us_material = evaluate_material(board, us);
-    int them_material = evaluate_material(board, them);
-    int material = us_material - them_material;
+    int us_material_mg = evaluate_material(board, us, MG_PIECE_VALUE);
+    int them_material_mg = evaluate_material(board, them, MG_PIECE_VALUE);
+    int us_material_eg = evaluate_material(board, us, EG_PIECE_VALUE);
+    int them_material_eg = evaluate_material(board, them, EG_PIECE_VALUE);
 
     int us_position = evaluate_position(board, us);
     int them_position = evaluate_position(board, them);
@@ -263,20 +264,21 @@ int Evaluator::evaluate(const Board& board) const {
     int king = us_king - them_king;
 
     int p = phase(board);
-    int mg_score = material + position + mobility + king;
-    int eg_score = material + position + mobility + king;
+    int mg_score = (us_material_mg - them_material_mg) + position + mobility + king;
+    int eg_score = (us_material_eg - them_material_eg) + position + mobility + king;
 
     return interpolate(mg_score, eg_score, p);
 }
 
-int Evaluator::evaluate_material(const Board& board, Color c) const {
+int Evaluator::evaluate_material(const Board& board, Color c, const int* piece_values) const {
+    if (piece_values == nullptr) {
+        piece_values = MG_PIECE_VALUE;
+    }
     int score = 0;
     for (int pt = 0; pt < NUM_PIECES; ++pt) {
         Bitboard bb = board.pieces(static_cast<PieceType>(pt), c);
         int count = BitOps::popcountll(bb);
-        if (pt < NUM_PIECES) {
-            score += MG_PIECE_VALUE[pt] * count;
-        }
+        score += piece_values[pt] * count;
     }
     return score;
 }
