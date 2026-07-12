@@ -200,6 +200,11 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         if (m_tt->probe(key, depth, alpha, beta, tt_score, tt_move)) {
             m_stats.tt_probes++;
             m_stats.tt_hits++;
+            // Adjust mate scores from TT to be relative to current ply
+            if (abs(tt_score) > 29000) {
+                if (tt_score > 0) tt_score -= ply;
+                else tt_score += ply;
+            }
             if (tt_score >= beta) {
                 m_stats.tt_cutoffs++;
                 best_move = tt_move;
@@ -273,8 +278,15 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
     // Store in transposition table
     if (m_config.use_tt) {
         uint64_t key = board.zobrist_key();
+        int tt_score = best_score;
+        // Adjust mate scores to be relative to root so they remain correct
+        // when retrieved at a different ply
+        if (abs(tt_score) > 29000) {
+            if (tt_score > 0) tt_score += ply;
+            else tt_score -= ply;
+        }
         TTFlag flag = (best_score >= beta) ? LOWERBOUND : ((best_score <= alpha && alpha < beta - 1) ? UPPERBOUND : EXACT);
-        m_tt->store(key, best_score, depth, flag, best_move);
+        m_tt->store(key, tt_score, depth, flag, best_move);
     }
 
     return best_score;

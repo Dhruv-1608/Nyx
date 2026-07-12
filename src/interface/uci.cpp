@@ -183,6 +183,9 @@ void UCI::cmd_go(const std::string& args) {
 
 void UCI::cmd_stop() {
     m_should_stop = true;
+    if (m_searcher) {
+        m_searcher->stop();
+    }
 }
 
 void UCI::cmd_quit() {

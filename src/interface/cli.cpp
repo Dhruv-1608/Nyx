@@ -11,6 +11,9 @@
 CLI::CLI() {
     m_board = std::make_unique<Board>();
     m_searcher = std::make_unique<Searcher>();
+    m_board->reset();
+    m_searcher->clear_history();
+    m_searcher->add_history(m_board->zobrist_key());
 }
 
 CLI::~CLI() = default;
@@ -52,6 +55,7 @@ void CLI::run() {
         if (parse_move(input, move)) {
             if (MoveValidator::is_legal(*m_board, move)) {
                 m_board->make_move(move);
+                m_searcher->add_history(m_board->zobrist_key());
             } else {
                 std::cout << "Illegal move" << std::endl;
             }
@@ -96,6 +100,7 @@ void CLI::make_engine_move(int depth) {
     Move best_move;
     m_searcher->search(*m_board, best_move, config);
     m_board->make_move(best_move);
+    m_searcher->add_history(m_board->zobrist_key());
     std::cout << "Engine plays: " << move_to_string(best_move) << std::endl;
 }
 
