@@ -79,6 +79,18 @@ void Searcher::reset_stats() {
         }
     }
     m_pv_line.clear();
+
+    // Clear move ordering heuristics
+    for (int i = 0; i < MAX_PLIES; ++i) {
+        m_killer_moves[i][0] = Move();
+        m_killer_moves[i][1] = Move();
+    }
+    for (int i = 0; i < 64; ++i) {
+        for (int j = 0; j < 64; ++j) {
+            m_history_moves[i][j] = 0;
+            m_counter_moves[i][j] = Move();
+        }
+    }
 }
 
 int Searcher::search(Board& board, Move& best_move, const Config& config) {
@@ -231,21 +243,16 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         return 0;
     }
 
-    // Sort moves - TT move first, then by MVV-LVA
-    vector<pair<int, Move>> scored_moves;
-    for (const Move& move : moves.moves) {
-        int score = mvv_lva_score(board, move);
-        if (move == tt_move) score += 10000; // Prioritize TT move
-        scored_moves.push_back({score, move});
-    }
-    sort(scored_moves.begin(), scored_moves.end(), [](const auto& a, const auto& b) {
-        return a.first > b.first;
-    });
+    // Order moves using heuristics
+    order_moves(moves, board, tt_move, ply);
 
     int best_score = -30000;
-    Move local_best = scored_moves[0].second;
+    Move local_best = moves.moves[0];
 
-    for (const auto& [score, move] : scored_moves) {
+    int move_count = 0;
+    for (Move& move : moves.moves) {
+        move_count++;
+
         board.make_move(move);
         m_position_history.push_back(board.zobrist_key());
         
@@ -269,6 +276,21 @@ int Searcher::alpha_beta(Board& board, int depth, int alpha, int beta, bool do_n
         alpha = max(alpha, best_score);
         if (alpha >= beta) {
             m_stats.cutoffs++;
+
+            // Store killer moves (quiet non-capture moves that cause beta cutoff)
+            if (!move.is_capture() && !move.is_castle()) {
+                // Shift existing killers
+                if (move != m_killer_moves[ply][0]) {
+                    m_killer_moves[ply][1] = m_killer_moves[ply][0];
+                    m_killer_moves[ply][0] = move;
+                }
+
+                // Update history heuristic (cap at 5000 to avoid overflow)
+                m_history_moves[move.from()][move.to()] += depth * depth;
+                if (m_history_moves[move.from()][move.to()] > 5000)
+                    m_history_moves[move.from()][move.to()] = 5000;
+            }
+
             break;
         }
     }
@@ -330,10 +352,52 @@ int Searcher::quiescence(Board& board, int alpha, int beta, int depth, int ply) 
     return alpha;
 }
 
-void Searcher::order_moves(MoveList& moves, const Board& board, Move tt_move) {
-    (void)moves;
-    (void)board;
-    (void)tt_move;
+void Searcher::order_moves(MoveList& moves, const Board& board, Move tt_move, int ply) {
+    // (void)moves;
+    // (void)board;
+    // (void)tt_move;
+    // (void)ply;
+
+    // Score moves
+    for (Move& move : moves.moves) {
+        move.set_score(0); // Reset score
+
+        // 1. TT Move
+        if (move == tt_move) {
+            move.set_score(20000); // Highest priority
+            continue;
+        }
+
+        // 2. Captures (MVV-LVA)
+        if (is_capture(move, board)) {
+            move.set_score(mvv_lva_score(board, move));
+            continue;
+        }
+
+        // 3. Killer Moves
+        if (move == m_killer_moves[ply][0]) {
+            move.set_score(9000);
+            continue;
+        }
+        if (move == m_killer_moves[ply][1]) {
+            move.set_score(8000);
+            continue;
+        }
+
+        // 4. History Heuristic
+        move.set_score(m_history_moves[move.from()][move.to()]);
+
+        // 5. Counter Moves (Optional, more advanced. For now, history should cover quiet moves.)
+        // if (m_counter_moves[prev_move.from()][prev_move.to()] == move) {
+        //     move.set_score(7000);
+        //     continue;
+        // }
+    }
+
+    // Sort moves by score descending
+    sort(moves.moves.begin(), moves.moves.end(), [](const Move& a, const Move& b) {
+        return a.score() > b.score();
+    });
 }
 
 int Searcher::see_capture(const Board& board, Square to, PieceType capturer) const {

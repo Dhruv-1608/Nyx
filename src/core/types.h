@@ -41,11 +41,13 @@ enum MoveType : uint16_t {
 // Bits 0-5:  from square (6 bits)
 // Bits 6-11: to square (6 bits)
 // Bits 12-15: move type (4 bits)
+// Bits 16-23: score (8 bits) used for move ordering
 struct Move {
     uint16_t data;
+    int16_t m_score; // Score used for move ordering
     
-    Move() : data(0) {}
-    Move(uint16_t d) : data(d) {}
+    Move() : data(0), m_score(0) {}
+    Move(uint16_t d) : data(d), m_score(0) {}
     
     // Square accessors
     uint16_t from() const { return data & 0x3F; }
@@ -83,6 +85,10 @@ struct Move {
         if (is_cap) t |= 8;
         set_type(t);
     }
+    
+    // Score accessors for move ordering
+    int16_t score() const { return m_score; }
+    void set_score(int16_t s) { m_score = s; }
     
     // Comparison operators
     bool operator==(const Move& other) const { return data == other.data; }
