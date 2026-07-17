@@ -56,10 +56,15 @@ private:
     int m_pv_length[MAX_PLIES];
     std::vector<Move> m_pv_line;            // Best PV line from root
 
+    // Move ordering heuristics
+    std::array<std::array<Move, 2>, MAX_PLIES> m_killer_moves; // [ply][2]
+    std::array<std::array<int, 64>, 64> m_history_moves; // [from_sq][to_sq] for quiet moves
+    std::array<std::array<Move, 64>, 64> m_counter_moves; // [prev_move_from_sq][prev_move_to_sq]
+
     int alpha_beta(Board& board, int depth, int alpha, int beta, bool do_null, Move& best_move, int ply = 0);
     int quiescence(Board& board, int alpha, int beta, int depth, int ply = 0);
     int aspiration_search(Board& board, int depth, Move& best_move, int prev_score = 0);
-    void order_moves(MoveList& moves, const Board& board, Move tt_move = Move());
+    void order_moves(MoveList& moves, const Board& board, Move tt_move, int ply);
     int see_capture(const Board& board, Square to, PieceType capturer) const;
     int stand_pat(const Board& board) const;
     bool check_time();
